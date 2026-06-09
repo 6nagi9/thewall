@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+
+    // User profile: private to the owner. Clients may create/update only their
+    // own profile, and only the safe fields (server fields are Function-only).
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      // Client may only ever set/modify these safe fields. Server-only fields
+      // (premium, giveToGetCount, unlockedWalls) are written by Functions via
+      // the Admin SDK, which bypasses these rules.
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(
+             ['phoneHash','displayName','consentAt','ageConfirmed']);
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+             ['phoneHash','displayName','consentAt','ageConfirmed']);
+      allow delete: if false; // erasure happens via Cloud Function only
+
+      // Inbox (received feedback) is readable by the owner; written by Functions.
+      match /inbox/{docId} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+    }
+
+    // Public walls: world-readable (aggregates only), never client-writable.
+    match /walls/{phoneHash} {
+      allow read: if isSignedIn();
+      allow write: if false; // Functions only (admin SDK bypasses rules)
+    }
+
+    // Raw reviews are NEVER client-readable (reviewer anonymity) or writable.
+    match /reviews/{id} {
+      allow read, write: if false;
+    }
+
+    // Dedup keys, escrow invites, disputes, reports, blocks: Functions only.
+    match /reviewDedup/{id}     { allow read, write: if false; }
+    match /invites/{id}         { allow read, write: if false; }
+    match /disputes/{id}        { allow read, write: if false; }
+    match /reports/{id}         { allow read, write: if false; }
+    match /blocks/{id}          { allow read, write: if false; }
+
+    // Gamification: public read (leaderboards), Function-only write.
+    match /gamification/{uid} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Feedback campaigns: owner manages their own requests.
+    match /feedbackRequests/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Payment ledger: Functions only.
+    match /ledger/{id} { allow read, write: if false; }
+  }
+}

@@ -43,3 +43,21 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.runtimeconfig.json
+# Service-account private keys — NEVER commit
+*-service-account.json
+serviceAccountKey.json
+# Emulator persisted data
+/emulator-data/
+
+# NOTE: firebase_options.dart, google-services.json and GoogleService-Info.plist
+# are intentionally NOT ignored. Google considers these safe to commit (they hold
+# public app identifiers, not secrets); access is protected by Firestore Security
+# Rules + App Check, and CI/builds need them. Add them here only if your org policy
+# requires it.

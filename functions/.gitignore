@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Compiled TypeScript output (built by `npm run build`)
+lib/
+
+# Logs
+*.log
+firebase-debug.log
+firebase-debug.*.log
+
+# Local Functions config / secrets — NEVER commit
+.env
+.env.*
+.runtimeconfig.json
+*-service-account.json
+serviceAccountKey.json
