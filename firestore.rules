@@ -17,7 +17,7 @@ service cloud.firestore {
              ['phoneHash','displayName','consentAt','ageConfirmed']);
       allow update: if isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-             ['phoneHash','displayName','consentAt','ageConfirmed']);
+             ['phoneHash','displayName','consentAt','ageConfirmed','fcmToken']);
       allow delete: if false; // erasure happens via Cloud Function only
 
       // Inbox (received feedback) is readable by the owner; written by Functions.

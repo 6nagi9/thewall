@@ -8,6 +8,7 @@ import '../../core/badge_definitions.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
 import '../gamification/badges_screen.dart';
+import '../premium/analytics_screen.dart';
 import '../premium/premium_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -92,6 +93,24 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const BadgesScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.show_chart, color: AppTheme.teal),
+            title: const Text('Trend analytics'),
+            subtitle: const Text('See how your scores change over time'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (user?.premium != true)
+                  const Chip(
+                      label: Text('Premium',
+                          style: TextStyle(fontSize: 11)),
+                      visualDensity: VisualDensity.compact),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AnalyticsScreen())),
           ),
           SwitchListTile(
             secondary: const Icon(Icons.leaderboard_outlined),

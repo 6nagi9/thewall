@@ -1,8 +1,10 @@
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { setGlobalOptions } from "firebase-functions/v2";
+import { defineSecret } from "firebase-functions/params";
 
 import {
   aggregate,
@@ -16,6 +18,8 @@ import {
   GIVE_TO_GET,
   MIN_REVIEWS_FOR_AGGREGATE,
 } from "./util";
+
+const wallServerSalt = defineSecret("WALL_SERVER_SALT");
 
 initializeApp();
 const db = getFirestore();
@@ -35,7 +39,7 @@ function requireAuth(auth: { uid: string } | undefined): string {
  * validate → block-check → Layer-2 moderate → server-hash reviewer →
  * dedup → escrow-or-apply → recompute aggregate → credit give-to-get → badges.
  */
-export const submitReview = onCall(async (req) => {
+export const submitReview = onCall({ secrets: [wallServerSalt] }, async (req) => {
   const uid = requireAuth(req.auth);
   const {
     targetPhoneHash,
@@ -126,6 +130,22 @@ export const submitReview = onCall(async (req) => {
   await dedupRef.set({ targetPhoneHash, createdAt: FieldValue.serverTimestamp() });
   await recomputeWall(targetPhoneHash);
 
+  // Push notification to the target (non-blocking — missing token or APNS
+  // config just means silent failure, never blocks the review flow).
+  try {
+    const fcmToken = (await db.collection("users").doc(targetUid).get()).get("fcmToken");
+    if (fcmToken) {
+      await getMessaging().send({
+        token: fcmToken as string,
+        notification: {
+          title: "New feedback on The Wall",
+          body: `${authorName || "Someone"} gave you feedback.`,
+        },
+        data: { type: "new_feedback" },
+      });
+    }
+  } catch (err) { console.debug("FCM send skipped:", err); }
+
   // Credit give-to-get only for a new distinct contact (Path A).
   if (!alreadyReviewed) {
     await db
@@ -189,7 +209,23 @@ export const onUserJoin = onCall(async (req) => {
     released++;
   }
 
-  if (released > 0) await recomputeWall(phoneHash);
+  if (released > 0) {
+    await recomputeWall(phoneHash);
+    // Notify the new joiner that they have waiting feedback.
+    try {
+      const fcmToken = (await db.collection("users").doc(uid).get()).get("fcmToken");
+      if (fcmToken) {
+        await getMessaging().send({
+          token: fcmToken as string,
+          notification: {
+            title: "You have feedback waiting!",
+            body: `${released} piece${released > 1 ? "s" : ""} of feedback unlocked on The Wall.`,
+          },
+          data: { type: "feedback_released" },
+        });
+      }
+    } catch (err) { console.debug("FCM send skipped:", err); }
+  }
 
   await updateStreak(db, uid);
   await awardBadgeIfNeeded(db, uid, "wall_claimed");
@@ -287,7 +323,7 @@ export const reportContent = onCall(async (req) => {
  * DPDP erasure — delete the user, their wall, feedback about them.
  * Keep outgoing reviews (those are the targets' data) but sever the identity link.
  */
-export const handleErasure = onCall(async (req) => {
+export const handleErasure = onCall({ secrets: [wallServerSalt] }, async (req) => {
   const uid = requireAuth(req.auth);
   const userSnap = await db.collection("users").doc(uid).get();
   const phoneHash = userSnap.get("phoneHash");
