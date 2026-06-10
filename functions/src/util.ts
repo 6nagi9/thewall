@@ -1,4 +1,4 @@
-import * as crypto from "crypto";
+import * as crypto from "node:crypto";
 import { Firestore, Timestamp } from "firebase-admin/firestore";
 
 // Server-held secret (set via `firebase functions:config` or env in prod).
@@ -78,27 +78,76 @@ export function opennessLabel(disclosed: number, received: number): {
 }
 
 /**
- * Layer-2 server-side moderation. In production this calls Perspective API or
- * OpenAI Moderation. Here we run a deterministic blocklist so the pipeline is
- * fully testable on the emulator without external keys.
+ * Layer-2 server-side moderation (authoritative gate).
+ *
+ * Two stages, defence-in-depth:
+ *   2a. Deterministic blocklist — always on, zero-latency, catches obvious
+ *       slurs even if the external API is down or unconfigured.
+ *   2b. Google Perspective API — ML toxicity/threat/identity-attack scoring,
+ *       enabled when PERSPECTIVE_API_KEY is set. Fails OPEN on API error
+ *       (the blocklist has already run), so a transient outage never blocks
+ *       legitimate feedback.
+ *
+ * The key is read from the environment at call time so it works with Cloud
+ * Functions v2 bound secrets.
  */
 const BLOCKED = [
   "idiot", "stupid", "moron", "loser", "ugly", "hate you", "worthless",
   "pathetic", "disgusting", "trash", "kill", "scum", "die",
 ];
+
 export async function moderateText(text?: string | null): Promise<{
   ok: boolean;
   reason?: string;
 }> {
   if (!text) return { ok: true };
+
+  // 2a — deterministic blocklist.
   const lower = text.toLowerCase();
   for (const term of BLOCKED) {
     if (lower.includes(term)) {
       return { ok: false, reason: "Comment failed moderation." };
     }
   }
-  // TODO: replace with Perspective/OpenAI moderation API call.
-  return { ok: true };
+
+  // 2b — Perspective API (optional; configured via secret). The "REPLACE_ME"
+  // sentinel means the secret exists for deploy but no real key is set yet, so
+  // we stay blocklist-only without making a doomed API call.
+  const key = process.env.PERSPECTIVE_API_KEY;
+  if (!key || key === "REPLACE_ME") return { ok: true };
+  try {
+    const res = await fetch(
+      `https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${key}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          comment: { text },
+          languages: ["en"],
+          requestedAttributes: {
+            TOXICITY: {},
+            SEVERE_TOXICITY: {},
+            INSULT: {},
+            THREAT: {},
+            IDENTITY_ATTACK: {},
+          },
+        }),
+      }
+    );
+    if (!res.ok) return { ok: true }; // fail open
+    const data = (await res.json()) as {
+      attributeScores?: Record<string, { summaryScore?: { value?: number } }>;
+    };
+    const s = data.attributeScores || {};
+    const score = (k: string) => s[k]?.summaryScore?.value ?? 0;
+    const toxic = Math.max(score("SEVERE_TOXICITY"), score("TOXICITY"));
+    if (toxic >= 0.8 || score("THREAT") >= 0.8 || score("IDENTITY_ATTACK") >= 0.7) {
+      return { ok: false, reason: "Comment failed moderation." };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: true }; // fail open — blocklist already applied
+  }
 }
 
 /** Basic Sybil/velocity check: too many reviews of a target in a short window. */

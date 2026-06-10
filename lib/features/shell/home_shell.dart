@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../shared/connectivity_banner.dart';
 import '../my_wall/my_wall_screen.dart';
 import '../feedback/give_feedback_screen.dart';
 import '../discover/discover_screen.dart';
@@ -25,7 +26,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _index, children: _tabs),
+      body: ConnectivityBanner(
+        child: IndexedStack(index: _index, children: _tabs),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
         onTap: (i) => setState(() => _index = i),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,11 +21,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _verifying = false;
   String? _error;
 
+  Timer? _resendTimer;
+  int _resendIn = 0;
+
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _phoneCtrl.dispose();
     _otpCtrl.dispose();
     super.dispose();
+  }
+
+  void _startResendCountdown() {
+    _resendTimer?.cancel();
+    setState(() => _resendIn = 30);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return t.cancel();
+      setState(() => _resendIn--);
+      if (_resendIn <= 0) t.cancel();
+    });
   }
 
   String get _e164 {
@@ -44,7 +60,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         },
         verificationFailed: (e) =>
             setState(() => _error = e.message ?? 'Verification failed'),
-        codeSent: (id, _) => setState(() => _verificationId = id),
+        codeSent: (id, _) {
+          setState(() => _verificationId = id);
+          _startResendCountdown();
+        },
         codeAutoRetrievalTimeout: (id) => _verificationId = id,
       );
     } catch (e) {
@@ -129,9 +148,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onPressed: _verifying ? null : _verifyOtp,
                   child: _verifying ? const _Spin() : const Text('Verify & continue'),
                 ),
-                TextButton(
-                  onPressed: () => setState(() => _verificationId = null),
-                  child: const Text('Change number'),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => setState(() => _verificationId = null),
+                      child: const Text('Change number'),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: (_resendIn > 0 || _sending) ? null : _sendOtp,
+                      child: Text(_resendIn > 0
+                          ? 'Resend in ${_resendIn}s'
+                          : 'Resend code'),
+                    ),
+                  ],
                 ),
               ],
               if (_error != null) ...[

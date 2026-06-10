@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Wall — Honest feedback, on your terms</title>
+<meta name="description" content="The Wall is a consent-first feedback app. Claim your own wall, invite people to give you structured feedback, and control exactly what you share. Private by design, DPDP-compliant." />
+<meta property="og:title" content="The Wall — Honest feedback, on your terms" />
+<meta property="og:description" content="Claim your own wall, get structured feedback from people who know you, and control what's public. Consent-first and private by design." />
+<meta property="og:type" content="website" />
+<link rel="icon" type="image/png" href="assets/icon.png" />
+<style>
+  :root{
+    --slate900:#0F172A; --slate800:#1E293B; --slate700:#334155;
+    --slate500:#64748B; --slate300:#CBD5E1; --teal:#14B8A6; --teal-lt:#2DD4BF;
+    --amber:#F59E0B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--slate900); color:var(--slate300); line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+  h1,h2,h3{color:#fff;line-height:1.15;letter-spacing:-0.02em}
+  .accent{color:var(--teal)}
+
+  /* Nav */
+  nav{position:sticky;top:0;z-index:50;background:rgba(15,23,42,.85);
+    backdrop-filter:blur(12px);border-bottom:1px solid var(--slate800)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:#fff;font-size:18px}
+  .brand img{width:30px;height:30px;border-radius:8px}
+  .nav-links{display:flex;gap:28px;align-items:center}
+  .nav-links a{color:var(--slate300);font-size:15px;font-weight:500}
+  .nav-links a:hover{color:#fff}
+  .btn{display:inline-block;background:var(--teal);color:var(--slate900);
+    font-weight:700;padding:11px 20px;border-radius:10px;font-size:15px;
+    transition:transform .15s, background .15s}
+  .btn:hover{background:var(--teal-lt);transform:translateY(-1px)}
+  .btn-ghost{background:transparent;color:#fff;border:1px solid var(--slate700)}
+  .btn-ghost:hover{background:var(--slate800);border-color:var(--slate500)}
+  @media(max-width:720px){.nav-links a:not(.btn){display:none}}
+
+  /* Hero */
+  .hero{padding:90px 0 70px;text-align:center;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;inset:0;
+    background:radial-gradient(60% 50% at 50% 0%, rgba(20,184,166,.15), transparent 70%);
+    pointer-events:none}
+  .hero h1{font-size:clamp(36px,6vw,60px);font-weight:800;max-width:820px;margin:0 auto 20px}
+  .hero p{font-size:clamp(17px,2.4vw,21px);max-width:620px;margin:0 auto 32px;color:var(--slate300)}
+  .cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .store{display:inline-flex;align-items:center;gap:10px;background:var(--slate800);
+    border:1px solid var(--slate700);border-radius:12px;padding:10px 18px;color:#fff;
+    font-weight:600;transition:border-color .15s,transform .15s}
+  .store:hover{border-color:var(--teal);transform:translateY(-1px)}
+  .store small{display:block;color:var(--slate500);font-size:11px;font-weight:500}
+  .store span{font-size:16px}
+
+  /* Phone mockup */
+  .mock{margin:56px auto 0;width:280px;height:520px;border-radius:38px;
+    background:linear-gradient(160deg,var(--slate800),var(--slate900));
+    border:1px solid var(--slate700);box-shadow:0 40px 80px -20px rgba(0,0,0,.6);
+    position:relative;padding:18px}
+  .mock .screen{height:100%;border-radius:24px;background:var(--slate900);
+    border:1px solid var(--slate800);padding:22px 18px;text-align:left;overflow:hidden}
+  .mock .logo4{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:54px;margin-bottom:18px}
+  .mock .logo4 i{aspect-ratio:1;border-radius:6px;background:var(--teal)}
+  .mock .logo4 i:first-child{background:var(--teal-lt)}
+  .mock h4{color:#fff;font-size:18px;margin-bottom:14px}
+  .mock .card{background:var(--slate800);border-radius:14px;padding:14px;margin-bottom:12px}
+  .mock .bar{height:8px;border-radius:4px;background:var(--slate700);margin:7px 0}
+  .mock .bar.t{background:var(--teal);width:70%}
+  .mock .lock{font-size:30px;text-align:center;margin:6px 0}
+  .mock .stars{color:var(--amber);text-align:center;letter-spacing:3px;filter:blur(2px)}
+
+  /* Trust band */
+  .trust{border-top:1px solid var(--slate800);border-bottom:1px solid var(--slate800);
+    background:var(--slate900)}
+  .trust-in{display:flex;flex-wrap:wrap;gap:14px 40px;justify-content:center;
+    padding:22px 0;color:var(--slate500);font-size:14px;font-weight:600}
+  .trust-in span{display:inline-flex;align-items:center;gap:8px}
+
+  /* Sections */
+  section.block{padding:80px 0}
+  .eyebrow{color:var(--teal);font-weight:700;font-size:13px;letter-spacing:.08em;
+    text-transform:uppercase;margin-bottom:12px;text-align:center}
+  .block h2{font-size:clamp(28px,4vw,40px);font-weight:800;text-align:center;max-width:680px;margin:0 auto 14px}
+  .block .lead{text-align:center;max-width:600px;margin:0 auto 50px;font-size:18px}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .feature{background:var(--slate800);border:1px solid var(--slate700);border-radius:16px;
+    padding:26px;transition:border-color .15s,transform .15s}
+  .feature:hover{border-color:var(--teal);transform:translateY(-3px)}
+  .feature .ic{width:46px;height:46px;border-radius:12px;background:rgba(20,184,166,.15);
+    display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px}
+  .feature h3{font-size:19px;margin-bottom:8px}
+  .feature p{font-size:15px;color:var(--slate300)}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;counter-reset:s}
+  @media(max-width:860px){.steps{grid-template-columns:1fr}}
+  .step{position:relative;padding-left:8px}
+  .step .num{width:40px;height:40px;border-radius:50%;background:var(--teal);
+    color:var(--slate900);font-weight:800;display:flex;align-items:center;
+    justify-content:center;margin-bottom:14px}
+  .step h3{font-size:18px;margin-bottom:6px}
+  .step p{font-size:15px}
+
+  /* Differentiator split */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+  @media(max-width:860px){.split{grid-template-columns:1fr;gap:30px}}
+  .split h2{text-align:left;margin:0 0 16px}
+  .split ul{list-style:none;margin-top:18px}
+  .split li{padding:10px 0 10px 30px;position:relative;color:var(--slate300)}
+  .split li::before{content:"✓";position:absolute;left:0;color:var(--teal);font-weight:800}
+  .panel{background:linear-gradient(160deg,var(--slate800),var(--slate900));
+    border:1px solid var(--slate700);border-radius:20px;padding:30px}
+  .meter{margin:18px 0}
+  .meter label{display:flex;justify-content:space-between;font-size:13px;color:var(--slate500);margin-bottom:6px}
+  .meter .track{height:10px;border-radius:6px;background:var(--slate700);overflow:hidden}
+  .meter .fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--teal-lt))}
+
+  /* FAQ */
+  .faq{max-width:760px;margin:0 auto}
+  details{background:var(--slate800);border:1px solid var(--slate700);border-radius:12px;
+    padding:18px 22px;margin-bottom:12px}
+  details[open]{border-color:var(--teal)}
+  summary{cursor:pointer;font-weight:600;color:#fff;font-size:16px;list-style:none;
+    display:flex;justify-content:space-between;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";color:var(--teal);font-size:22px}
+  details[open] summary::after{content:"–"}
+  details p{margin-top:12px;font-size:15px}
+
+  /* CTA */
+  .cta{text-align:center;background:linear-gradient(160deg,rgba(20,184,166,.12),transparent);
+    border:1px solid var(--slate800);border-radius:24px;padding:60px 24px;margin:0 24px}
+  .cta h2{margin-bottom:14px}
+  .cta p{max-width:480px;margin:0 auto 28px}
+
+  footer{border-top:1px solid var(--slate800);padding:40px 0;margin-top:80px}
+  .foot-in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:20px;align-items:center}
+  .foot-links{display:flex;gap:24px;flex-wrap:wrap}
+  .foot-links a{color:var(--slate500);font-size:14px}
+  .foot-links a:hover{color:#fff}
+  .foot-note{color:var(--slate500);font-size:13px;margin-top:14px}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="brand" href="#"><img src="assets/icon.png" alt="The Wall logo" />The Wall</a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn" href="#get">Get the app</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>Honest feedback, <span class="accent">on your terms.</span></h1>
+    <p>Claim your own wall. Invite the people who know you to give structured feedback. You decide what stays private and what the world sees.</p>
+    <div class="cta-row" id="get">
+      <a class="store" href="#"><span>📱</span><div><small>Coming soon on</small><span>App Store</span></div></a>
+      <a class="store" href="#"><span>🤖</span><div><small>Coming soon on</small><span>Google Play</span></div></a>
+    </div>
+
+    <div class="mock" aria-hidden="true">
+      <div class="screen">
+        <div class="logo4"><i></i><i></i><i></i><i></i></div>
+        <h4>My Wall</h4>
+        <div class="card">
+          <div class="lock">🔒</div>
+          <div class="stars">★★★★★</div>
+          <div class="bar t"></div>
+          <div class="bar"></div>
+        </div>
+        <div class="card">
+          <div class="bar t" style="width:55%"></div>
+          <div class="bar"></div>
+          <div class="bar" style="width:80%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="trust">
+  <div class="wrap trust-in">
+    <span>🔒 Consent-first by design</span>
+    <span>🇮🇳 Data stored in India</span>
+    <span>📜 DPDP Act 2023 compliant</span>
+    <span>🔞 18+ only</span>
+    <span>🛡️ Moderated &amp; safe</span>
+  </div>
+</div>
+
+<section class="block" id="features">
+  <div class="wrap">
+    <div class="eyebrow">Why The Wall</div>
+    <h2>Reputation you actually control</h2>
+    <p class="lead">Not a place to rate strangers. A place to understand yourself and grow — with consent at every step.</p>
+    <div class="grid">
+      <div class="feature"><div class="ic">🎯</div><h3>Structured feedback</h3><p>Ratings on fixed dimensions and curated tags — no free-form abuse, no anonymous pile-ons.</p></div>
+      <div class="feature"><div class="ic">👁️</div><h3>You choose what's public</h3><p>Everything written about you stays private until you decide to disclose it on your wall.</p></div>
+      <div class="feature"><div class="ic">📈</div><h3>Growth insights</h3><p>Track strengths, trends over time, streaks, and a positive openness score as you grow.</p></div>
+      <div class="feature"><div class="ic">🤝</div><h3>Give to get</h3><p>Help others with thoughtful feedback to unlock deeper insight into your own wall.</p></div>
+      <div class="feature"><div class="ic">🔐</div><h3>Private by design</h3><p>Contacts are hashed on your device. We never store your address book or build profiles for non-members.</p></div>
+      <div class="feature"><div class="ic">⚖️</div><h3>Safe &amp; accountable</h3><p>Two-layer moderation, block &amp; report, disputes, and a published grievance officer.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="how" style="background:var(--slate800)">
+  <div class="wrap">
+    <div class="eyebrow">How it works</div>
+    <h2>Three steps to your wall</h2>
+    <div class="steps" style="margin-top:50px">
+      <div class="step"><div class="num">1</div><h3>Claim your wall</h3><p>Sign in with your phone, give consent, and claim the one profile that exists for you — by your choice.</p></div>
+      <div class="step"><div class="num">2</div><h3>Invite &amp; give feedback</h3><p>Invite contacts through your own messaging app, and give structured feedback to people you know.</p></div>
+      <div class="step"><div class="num">3</div><h3>Control &amp; grow</h3><p>See everything you receive, choose what to make public, and watch your openness and growth scores rise.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap split">
+    <div>
+      <div class="eyebrow" style="text-align:left">The difference</div>
+      <h2>Owner-controlled. Openness as a strength.</h2>
+      <p>Other apps expose people without consent. The Wall flips it: you own your feedback, and a positive <strong style="color:#fff">openness signal</strong> shows how transparent you choose to be — never a shaming score.</p>
+      <ul>
+        <li>You see 100% of your feedback, always</li>
+        <li>Disclose item-by-item, on your terms</li>
+        <li>Openness shown as a positive, tiered badge</li>
+        <li>Aggregates appear only after enough reviews</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:6px">Openness</h3>
+      <p style="font-size:14px;color:var(--slate500)">How transparent you choose to be</p>
+      <div class="meter"><label><span>Punctuality</span><span>Open</span></label><div class="track"><div class="fill" style="width:78%"></div></div></div>
+      <div class="meter"><label><span>Communication</span><span>Very Open</span></label><div class="track"><div class="fill" style="width:92%"></div></div></div>
+      <div class="meter"><label><span>Reliability</span><span>Selective</span></label><div class="track"><div class="fill" style="width:48%"></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="privacy" style="background:var(--slate800)">
+  <div class="wrap split">
+    <div class="panel" style="order:-1">
+      <div style="font-size:46px;margin-bottom:10px">🛡️</div>
+      <h3 style="margin-bottom:10px">Built for DPDP, TRAI &amp; the stores</h3>
+      <p style="font-size:15px">No data about a person is processed until they join and consent. Invites go through your own phone — never a server SMS blast. Real erasure, data export, and a grievance officer are built in.</p>
+    </div>
+    <div>
+      <div class="eyebrow" style="text-align:left">Privacy first</div>
+      <h2 style="text-align:left;margin:0 0 16px">Your data, your rights</h2>
+      <ul style="list-style:none">
+        <li style="padding:10px 0 10px 30px;position:relative"><span style="position:absolute;left:0">🔒</span>Explicit, withdrawable consent at sign-up</li>
+        <li style="padding:10px 0 10px 30px;position:relative"><span style="position:absolute;left:0">📤</span>Export everything we hold about you</li>
+        <li style="padding:10px 0 10px 30px;position:relative"><span style="position:absolute;left:0">🗑️</span>Permanent erasure — not just "hidden"</li>
+        <li style="padding:10px 0 10px 30px;position:relative"><span style="position:absolute;left:0">🇮🇳</span>Stored in India (asia-south1)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="faq">
+  <div class="wrap">
+    <div class="eyebrow">Questions</div>
+    <h2 style="margin-bottom:50px">Frequently asked</h2>
+    <div class="faq">
+      <details open><summary>Can someone write about me without my consent?</summary><p>No. The Wall never creates a profile for someone who hasn't joined. If a contact drafts feedback for you before you join, it's encrypted and held briefly in escrow — only released to you after you join and consent, and even then it stays private until you choose to share it.</p></details>
+      <details><summary>Is feedback anonymous?</summary><p>For someone you invite, you always send the invite yourself, so you're identified. For existing members, reviewers can choose to be named or anonymous to other users. In all cases we retain a recoverable identity mapping so we can comply with lawful requests — anonymous never means anonymous to the law.</p></details>
+      <details><summary>How do you prevent abuse?</summary><p>Feedback uses fixed rating dimensions and curated tags — no free-form slurs. Comments pass two-layer moderation. You can block, report, and dispute, and aggregates only appear after a minimum number of reviews to protect against single-source attacks.</p></details>
+      <details><summary>What does it cost?</summary><p>The core experience is free. Premium unlocks deep personal analytics, trend charts, coaching prompts, and feedback campaigns.</p></details>
+      <details><summary>Where is my data stored?</summary><p>In India (Google Cloud, Mumbai region), consistent with DPDP transfer rules. You can export or permanently delete it anytime from Settings.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="cta">
+    <h2>Ready to claim your wall?</h2>
+    <p>Honest, structured, consent-first feedback — and full control over what you share.</p>
+    <div class="cta-row">
+      <a class="store" href="#"><span>📱</span><div><small>Coming soon on</small><span>App Store</span></div></a>
+      <a class="store" href="#"><span>🤖</span><div><small>Coming soon on</small><span>Google Play</span></div></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-in">
+      <a class="brand" href="#"><img src="assets/icon.png" alt="The Wall logo" />The Wall</a>
+      <div class="foot-links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms of Use</a>
+        <a href="mailto:grievance@thewall.app">Grievance Officer</a>
+      </div>
+    </div>
+    <p class="foot-note">© 2026 The Wall. Consent-first feedback. Data stored in India · DPDP Act 2023 compliant · 18+ only.</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -2,12 +2,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/badge_definitions.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
 import '../gamification/badges_screen.dart';
+import '../legal/legal_screens.dart';
 import '../premium/analytics_screen.dart';
 import '../premium/premium_screen.dart';
 
@@ -138,6 +140,24 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
 
+          // ── Legal ────────────────────────────────────────────────────────
+          const _SectionHeader('Legal'),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Privacy Policy'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('Terms of Use'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const TermsScreen())),
+          ),
+          const Divider(),
+
           // ── Account ───────────────────────────────────────────────────────
           const _SectionHeader('Account'),
           ListTile(
@@ -146,12 +166,7 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => FirebaseAuth.instance.signOut(),
           ),
           const SizedBox(height: 24),
-          const Center(
-            child: Text(
-              'The Wall · Data stored in India (asia-south1)',
-              style: TextStyle(color: AppTheme.slate500, fontSize: 12),
-            ),
-          ),
+          const Center(child: _AppVersionFooter()),
           const SizedBox(height: 24),
         ],
       ),
@@ -276,6 +291,36 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Footer showing data-residency note + the app version/build number.
+class _AppVersionFooter extends StatelessWidget {
+  const _AppVersionFooter();
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snap) {
+        final v = snap.hasData
+            ? 'v${snap.data!.version} (${snap.data!.buildNumber})'
+            : '';
+        return Column(
+          children: [
+            const Text(
+              'The Wall · Data stored in India (asia-south1)',
+              style: TextStyle(color: AppTheme.slate500, fontSize: 12),
+            ),
+            if (v.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(v,
+                  style: const TextStyle(
+                      color: AppTheme.slate700, fontSize: 11)),
+            ],
+          ],
+        );
+      },
     );
   }
 }

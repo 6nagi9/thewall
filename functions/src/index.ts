@@ -4,7 +4,8 @@ import { getMessaging } from "firebase-admin/messaging";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { defineSecret } from "firebase-functions/params";
+import { defineSecret, defineString } from "firebase-functions/params";
+import { GoogleAuth } from "google-auth-library";
 
 import {
   aggregate,
@@ -19,7 +20,15 @@ import {
   MIN_REVIEWS_FOR_AGGREGATE,
 } from "./util";
 
+// Secrets (set via `firebase functions:secrets:set <NAME>`).
 const wallServerSalt = defineSecret("WALL_SERVER_SALT");
+const perspectiveKey = defineSecret("PERSPECTIVE_API_KEY"); // optional moderation
+const appleSharedSecret = defineSecret("APPLE_SHARED_SECRET"); // iOS IAP
+
+// Android package name for Play receipt verification (non-secret config).
+const androidPackage = defineString("ANDROID_PACKAGE", {
+  default: "com.thewall.wall",
+});
 
 initializeApp();
 const db = getFirestore();
@@ -39,7 +48,9 @@ function requireAuth(auth: { uid: string } | undefined): string {
  * validate → block-check → Layer-2 moderate → server-hash reviewer →
  * dedup → escrow-or-apply → recompute aggregate → credit give-to-get → badges.
  */
-export const submitReview = onCall({ secrets: [wallServerSalt] }, async (req) => {
+export const submitReview = onCall(
+  { secrets: [wallServerSalt, perspectiveKey] },
+  async (req) => {
   const uid = requireAuth(req.auth);
   const {
     targetPhoneHash,
@@ -381,32 +392,103 @@ export const requestFeedback = onCall(async (req) => {
 // ─── verifyPurchase ───────────────────────────────────────────────────────────
 
 /**
- * Verify an IAP receipt and grant premium status.
- * TODO: replace with real App Store / Google Play receipt verification
- *       using stored service-account credentials before going live.
+ * Verify an IAP receipt with the store, then grant premium status.
+ *
+ * iOS  → Apple verifyReceipt (prod, auto-falls-back to sandbox).
+ * Android → Google Play Developer API (purchases.products), authenticated with
+ *           the function's service account (must be granted access in Play
+ *           Console). On the emulator (FUNCTIONS_EMULATOR=true) verification is
+ *           skipped so the flow is testable without store credentials.
  */
-export const verifyPurchase = onCall(async (req) => {
-  const uid = requireAuth(req.auth);
-  const { productId, verificationData, source } = req.data || {};
-  if (!productId || !verificationData) {
-    throw new HttpsError("invalid-argument", "productId and verificationData required.");
+export const verifyPurchase = onCall(
+  { secrets: [appleSharedSecret] },
+  async (req) => {
+    const uid = requireAuth(req.auth);
+    const { productId, verificationData, source } = req.data || {};
+    if (!productId || !verificationData) {
+      throw new HttpsError(
+        "invalid-argument",
+        "productId and verificationData required."
+      );
+    }
+
+    const onEmulator = process.env.FUNCTIONS_EMULATOR === "true";
+    let verified = onEmulator;
+
+    if (!onEmulator) {
+      if (source === "app_store") {
+        verified = await verifyApple(verificationData as string);
+      } else if (source === "google_play") {
+        verified = await verifyGoogle(productId as string, verificationData as string);
+      } else {
+        throw new HttpsError("invalid-argument", "Unknown purchase source.");
+      }
+    }
+
+    await db.collection("ledger").add({
+      uid,
+      productId,
+      source: source || "unknown",
+      verified,
+      verificationDataPrefix: (verificationData as string).substring(0, 64),
+      processedAt: FieldValue.serverTimestamp(),
+    });
+
+    if (!verified) {
+      throw new HttpsError("permission-denied", "Receipt could not be verified.");
+    }
+
+    await db.collection("users").doc(uid).set(
+      { premium: true, premiumSince: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+
+    return { ok: true };
   }
+);
 
-  await db.collection("ledger").add({
-    uid,
-    productId,
-    source: source || "unknown",
-    verificationDataPrefix: (verificationData as string).substring(0, 64),
-    processedAt: FieldValue.serverTimestamp(),
+/** Validate an App Store receipt; tries prod then sandbox (status 21007). */
+async function verifyApple(receiptData: string): Promise<boolean> {
+  const body = JSON.stringify({
+    "receipt-data": receiptData,
+    password: process.env.APPLE_SHARED_SECRET || "",
+    "exclude-old-transactions": true,
   });
+  const post = async (url: string) => {
+    const r = await fetch(url, { method: "POST", body });
+    return (await r.json()) as { status?: number };
+  };
+  try {
+    let j = await post("https://buy.itunes.apple.com/verifyReceipt");
+    if (j.status === 21007) {
+      j = await post("https://sandbox.itunes.apple.com/verifyReceipt");
+    }
+    return j.status === 0;
+  } catch (err) {
+    console.error("Apple receipt verification failed:", err);
+    return false;
+  }
+}
 
-  await db.collection("users").doc(uid).set(
-    { premium: true, premiumSince: FieldValue.serverTimestamp() },
-    { merge: true }
-  );
-
-  return { ok: true };
-});
+/** Validate a Google Play purchase token via the Android Publisher API. */
+async function verifyGoogle(productId: string, token: string): Promise<boolean> {
+  try {
+    const auth = new GoogleAuth({
+      scopes: ["https://www.googleapis.com/auth/androidpublisher"],
+    });
+    const client = await auth.getClient();
+    const pkg = androidPackage.value();
+    const url =
+      `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
+      `${pkg}/purchases/products/${productId}/tokens/${token}`;
+    const res = await client.request({ url });
+    const data = res.data as { purchaseState?: number };
+    return data.purchaseState === 0; // 0 = purchased
+  } catch (err) {
+    console.error("Google receipt verification failed:", err);
+    return false;
+  }
+}
 
 // ─── generateDataExport ───────────────────────────────────────────────────────
 
@@ -472,6 +554,176 @@ export const setLeaderboardOptIn = onCall(async (req) => {
   return { ok: true };
 });
 
+// ─── editReview ───────────────────────────────────────────────────────────────
+
+/**
+ * Reviewer edits feedback they previously gave (one review per reviewer→target).
+ * Latest-wins with a FRESH timestamp so decay weighting treats it as recent.
+ * Handles both applied reviews and still-escrowed invites.
+ */
+export const editReview = onCall(
+  { secrets: [wallServerSalt, perspectiveKey] },
+  async (req) => {
+    const uid = requireAuth(req.auth);
+    const {
+      targetPhoneHash,
+      dimensions,
+      tags = [],
+      comment = null,
+      anonymous = false,
+      contextTag = null,
+    } = req.data || {};
+    if (!targetPhoneHash) {
+      throw new HttpsError("invalid-argument", "targetPhoneHash required.");
+    }
+    for (const v of Object.values(dimensions || {})) {
+      if (typeof v !== "number" || v < 1 || v > 5) {
+        throw new HttpsError("invalid-argument", "Ratings must be 1-5.");
+      }
+    }
+    const mod = await moderateText(comment);
+    if (!mod.ok) return { ok: false, reason: mod.reason };
+
+    const dKey = dedupKey(uid, targetPhoneHash);
+    const authorName = anonymous
+      ? null
+      : (await db.collection("users").doc(uid).get()).get("displayName") || null;
+    const fields = {
+      dimensions: dimensions || {},
+      tags,
+      comment,
+      authorName,
+      contextTag,
+      namedOrAnon: anonymous ? "anon" : "named",
+      createdAt: FieldValue.serverTimestamp(),
+    };
+
+    // Still escrowed (target hasn't joined): edit the invite in place.
+    const inviteRef = db.collection("invites").doc(dKey);
+    if ((await inviteRef.get()).exists) {
+      await inviteRef.set(fields, { merge: true });
+      return { ok: true, escrowed: true };
+    }
+
+    const reviewRef = db.collection("reviews").doc(dKey);
+    if (!(await reviewRef.get()).exists) {
+      throw new HttpsError("not-found", "No existing review to edit.");
+    }
+    await reviewRef.set(fields, { merge: true });
+
+    const targetUserSnap = await db
+      .collection("users")
+      .where("phoneHash", "==", targetPhoneHash)
+      .limit(1)
+      .get();
+    if (!targetUserSnap.empty) {
+      const targetUid = targetUserSnap.docs[0].id;
+      await db
+        .collection("users")
+        .doc(targetUid)
+        .collection("inbox")
+        .doc(dKey)
+        .set(
+          { dimensions: dimensions || {}, tags, comment, authorName, contextTag },
+          { merge: true }
+        );
+      await recomputeWall(targetPhoneHash);
+    }
+    return { ok: true };
+  }
+);
+
+// ─── deleteReview ─────────────────────────────────────────────────────────────
+
+/** Reviewer deletes feedback they gave; removes it from the target's aggregate. */
+export const deleteReview = onCall(
+  { secrets: [wallServerSalt] },
+  async (req) => {
+    const uid = requireAuth(req.auth);
+    const { targetPhoneHash } = req.data || {};
+    if (!targetPhoneHash) {
+      throw new HttpsError("invalid-argument", "targetPhoneHash required.");
+    }
+    const dKey = dedupKey(uid, targetPhoneHash);
+
+    await db.collection("reviews").doc(dKey).delete().catch(() => {});
+    await db.collection("invites").doc(dKey).delete().catch(() => {});
+    await db.collection("reviewDedup").doc(dKey).delete().catch(() => {});
+
+    const targetUserSnap = await db
+      .collection("users")
+      .where("phoneHash", "==", targetPhoneHash)
+      .limit(1)
+      .get();
+    if (!targetUserSnap.empty) {
+      const targetUid = targetUserSnap.docs[0].id;
+      await db
+        .collection("users")
+        .doc(targetUid)
+        .collection("inbox")
+        .doc(dKey)
+        .delete()
+        .catch(() => {});
+      await recomputeWall(targetPhoneHash);
+    }
+
+    // Give-to-get credit is revoked along with the review.
+    await db
+      .collection("users")
+      .doc(uid)
+      .set({ giveToGetCount: FieldValue.increment(-1) }, { merge: true });
+
+    return { ok: true };
+  }
+);
+
+// ─── getPublicWall ────────────────────────────────────────────────────────────
+
+/**
+ * Server-gated read of another user's public wall. Enforces the give-to-get
+ * gate, block checks, and min-N gating — so walls are never directly readable
+ * by clients (which would allow phone-hash enumeration).
+ */
+export const getPublicWall = onCall(async (req) => {
+  const uid = requireAuth(req.auth);
+  const { phoneHash } = req.data || {};
+  if (!phoneHash) throw new HttpsError("invalid-argument", "phoneHash required.");
+
+  const caller = await db.collection("users").doc(uid).get();
+  if (((caller.get("giveToGetCount") as number) || 0) < GIVE_TO_GET) {
+    throw new HttpsError(
+      "permission-denied",
+      "Give feedback to 5 contacts to unlock walls."
+    );
+  }
+
+  const myHash = caller.get("phoneHash");
+  const [b1, b2] = await Promise.all([
+    db.collection("blocks").doc(`${phoneHash}_${myHash}`).get(),
+    db.collection("blocks").doc(`${myHash}_${phoneHash}`).get(),
+  ]);
+  if (b1.exists || b2.exists) {
+    throw new HttpsError("permission-denied", "This wall is unavailable.");
+  }
+
+  const wall = await db.collection("walls").doc(phoneHash).get();
+  if (!wall.exists) return { ok: true, wall: null };
+  const w = wall.data() || {};
+  if (((w.reviewCount as number) || 0) < MIN_REVIEWS_FOR_AGGREGATE) {
+    return { ok: true, wall: { gated: true } };
+  }
+  return {
+    ok: true,
+    wall: {
+      dimensionAverages: w.dimensionAverages || {},
+      tagCounts: w.tagCounts || {},
+      opennessLabel: w.opennessLabel || "New",
+      disclosedComments: w.disclosedComments || [],
+      reviewCount: w.reviewCount || 0,
+    },
+  };
+});
+
 // ─── Scheduled: recompute aggregates nightly ─────────────────────────────────
 
 export const recomputeAggregates = onSchedule("every 24 hours", async () => {
@@ -509,6 +761,29 @@ export const antiAbuseSweep = onSchedule("every 6 hours", async () => {
       await recomputeWall(target);
     }
   }
+});
+
+// ─── Scheduled: phone-recycling re-verification ──────────────────────────────
+
+/**
+ * Phone-recycling defense. Indian numbers can be deactivated and reassigned
+ * after ~90 days of disuse. We use last activity (gamification streak) as the
+ * signal: accounts dormant beyond the threshold are flagged `needsReverify`, so
+ * the client forces a fresh OTP before re-granting access — preventing a
+ * recycled number from inheriting the previous owner's Wall.
+ */
+export const reverifyNumber = onSchedule("every 24 hours", async () => {
+  const cutoff = Timestamp.fromMillis(Date.now() - 180 * 86_400_000);
+  const stale = await db
+    .collection("gamification")
+    .where("streak.lastActivityAt", "<", cutoff)
+    .limit(500)
+    .get();
+  await Promise.all(
+    stale.docs.map((d) =>
+      db.collection("users").doc(d.id).set({ needsReverify: true }, { merge: true })
+    )
+  );
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

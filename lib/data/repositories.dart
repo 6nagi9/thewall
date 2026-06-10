@@ -133,6 +133,32 @@ class WallRepository {
     );
   }
 
+  /// Edit feedback the current user previously gave (latest-wins, fresh time).
+  Future<SubmitResult> editReview(FeedbackDraft draft) async {
+    final res = await _fns.httpsCallable('editReview').call(draft.toCallable());
+    final data = Map<String, dynamic>.from(res.data as Map);
+    return SubmitResult(
+      ok: data['ok'] == true,
+      escrowed: data['escrowed'] == true,
+      reason: data['reason'] as String?,
+    );
+  }
+
+  /// Delete feedback the current user gave to [targetPhoneHash].
+  Future<void> deleteReview(String targetPhoneHash) => _fns
+      .httpsCallable('deleteReview')
+      .call({'targetPhoneHash': targetPhoneHash}).then((_) {});
+
+  /// Server-gated read of another user's public wall (give-to-get + blocks).
+  Future<Map<String, dynamic>?> getPublicWall(String phoneHash) async {
+    final res = await _fns
+        .httpsCallable('getPublicWall')
+        .call({'phoneHash': phoneHash});
+    final data = Map<String, dynamic>.from(res.data as Map);
+    final wall = data['wall'];
+    return wall == null ? null : Map<String, dynamic>.from(wall as Map);
+  }
+
   // ---- Owner disclosure control ----
 
   Future<void> setDisclosure(String feedbackId, bool disclosed) =>

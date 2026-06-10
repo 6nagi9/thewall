@@ -27,9 +27,16 @@ service cloud.firestore {
       }
     }
 
-    // Public walls: world-readable (aggregates only), never client-writable.
+    // Walls: aggregates only, never client-writable. NOT world-readable —
+    // the doc id is an (unsalted, low-entropy) phone hash, so a public read
+    // rule would let anyone enumerate every member's number offline. Only the
+    // wall's own owner may read it directly; viewing another user's public wall
+    // goes through the getPublicWall Function, which enforces the give-to-get
+    // gate + block checks server-side.
     match /walls/{phoneHash} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid))
+             .data.phoneHash == phoneHash;
       allow write: if false; // Functions only (admin SDK bypasses rules)
     }
 
@@ -45,9 +52,12 @@ service cloud.firestore {
     match /reports/{id}         { allow read, write: if false; }
     match /blocks/{id}          { allow read, write: if false; }
 
-    // Gamification: public read (leaderboards), Function-only write.
+    // Gamification: readable only when the user opted into leaderboards, or
+    // when it's your own doc. Prevents harvesting display names + scores of
+    // users who never consented to appear publicly. Function-only write.
     match /gamification/{uid} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn()
+        && (request.auth.uid == uid || resource.data.leaderboardOptIn == true);
       allow write: if false;
     }
 

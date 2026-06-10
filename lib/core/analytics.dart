@@ -1,0 +1,34 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// Firebase Analytics singleton.
+final analyticsProvider =
+    Provider<FirebaseAnalytics>((_) => FirebaseAnalytics.instance);
+
+/// Navigation observer that logs screen views automatically.
+final analyticsObserverProvider = Provider<FirebaseAnalyticsObserver>(
+  (ref) => FirebaseAnalyticsObserver(analytics: ref.watch(analyticsProvider)),
+);
+
+/// Thin wrapper so feature code can log domain events without importing Firebase
+/// directly. Names follow snake_case per the GA4 event convention.
+class Analytics {
+  final FirebaseAnalytics _a;
+  const Analytics(this._a);
+
+  Future<void> log(String name, [Map<String, Object>? params]) =>
+      _a.logEvent(name: name, parameters: params);
+
+  Future<void> reviewSubmitted({required bool escrowed}) =>
+      log('review_submitted', {'escrowed': escrowed.toString()});
+  Future<void> wallClaimed() => log('wall_claimed');
+  Future<void> disclosureToggled(bool disclosed) =>
+      log('disclosure_toggled', {'disclosed': disclosed.toString()});
+  Future<void> premiumViewed() => log('premium_viewed');
+  Future<void> purchaseCompleted(String productId) =>
+      log('purchase_completed', {'product_id': productId});
+  Future<void> campaignCreated() => log('campaign_created');
+}
+
+final appAnalyticsProvider =
+    Provider<Analytics>((ref) => Analytics(ref.watch(analyticsProvider)));

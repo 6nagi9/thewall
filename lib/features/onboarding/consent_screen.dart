@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
+import '../legal/legal_screens.dart';
 
 /// DPDP consent + 18+ gate + claim-your-wall. Mandatory, non-skippable.
 class ConsentScreen extends ConsumerStatefulWidget {
@@ -100,6 +101,38 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
             title: const Text(
                 'I consent to The Wall processing my data for the purposes '
                 'described above (DPDP Act, 2023).'),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                const Text('Read our ',
+                    style: TextStyle(color: AppTheme.slate500, fontSize: 13)),
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const PrivacyPolicyScreen())),
+                  child: const Text('Privacy Policy',
+                      style: TextStyle(
+                          color: AppTheme.teal,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
+                ),
+                const Text(' and ',
+                    style: TextStyle(color: AppTheme.slate500, fontSize: 13)),
+                GestureDetector(
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const TermsScreen())),
+                  child: const Text('Terms of Use',
+                      style: TextStyle(
+                          color: AppTheme.teal,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),

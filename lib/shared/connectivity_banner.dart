@@ -1,0 +1,51 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../core/theme.dart';
+
+/// Live connectivity status. Offline when the only result is `none`.
+final connectivityProvider = StreamProvider<List<ConnectivityResult>>(
+  (ref) => Connectivity().onConnectivityChanged,
+);
+
+/// A thin animated "no connection" bar that slides in below the app bar when
+/// the device goes offline. Wrap page content with this.
+class ConnectivityBanner extends ConsumerWidget {
+  final Widget child;
+  const ConnectivityBanner({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(connectivityProvider).value;
+    final offline =
+        status != null && status.every((r) => r == ConnectivityResult.none);
+    return Column(
+      children: [
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          child: offline
+              ? Container(
+                  width: double.infinity,
+                  color: AppTheme.rose,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.wifi_off, size: 16, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('No internet connection',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
