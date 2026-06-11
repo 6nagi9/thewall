@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
+import '../../shared/wall_ui.dart';
 
 /// Effective date shown on the legal documents. Update when policy changes.
 const String _kEffectiveDate = '10 June 2026';
@@ -28,35 +29,48 @@ class _LegalScaffold extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
         children: [
-          Text('Effective $_kEffectiveDate',
-              style: const TextStyle(color: AppTheme.slate500, fontSize: 12)),
-          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.clay.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(100),
+            ),
+            child: Text('Effective $_kEffectiveDate',
+                style: AppTheme.body(
+                    size: 12,
+                    weight: FontWeight.w700,
+                    color: AppTheme.clay)),
+          ).entrance(0),
+          const SizedBox(height: 16),
           Text(intro,
-              style: const TextStyle(color: AppTheme.slate300, height: 1.5)),
+                  style: AppTheme.body(
+                      size: 14.5, color: AppTheme.ink200, height: 1.6))
+              .entrance(1),
           const SizedBox(height: 8),
-          ...sections.map((s) => Padding(
-                padding: const EdgeInsets.only(top: 20),
+          ...sections.asMap().entries.map((entry) => Padding(
+                padding: const EdgeInsets.only(top: 22),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(s.heading,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w700)),
+                    Text(entry.value.heading,
+                        style: AppTheme.display(size: 17)),
                     const SizedBox(height: 8),
-                    ...s.paragraphs.map((p) => Padding(
+                    ...entry.value.paragraphs.map((p) => Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Text(p,
-                              style: const TextStyle(
-                                  color: AppTheme.slate300, height: 1.5)),
+                              style: AppTheme.body(
+                                  size: 13.5,
+                                  color: AppTheme.ink300,
+                                  height: 1.6)),
                         )),
                   ],
-                ),
+                ).entrance((entry.key + 2).clamp(0, 8)),
               )),
           const SizedBox(height: 32),
-          const Text('Grievance Officer: grievance@thewall.app · 7-day response',
-              style: TextStyle(color: AppTheme.slate500, fontSize: 12)),
+          Text('Grievance Officer: grievance@thewall.app · 7-day response',
+              style: AppTheme.body(size: 12, color: AppTheme.ink400)),
           const SizedBox(height: 24),
         ],
       ),

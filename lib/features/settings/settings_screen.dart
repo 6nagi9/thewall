@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/badge_definitions.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
+import '../../shared/wall_ui.dart';
 import '../gamification/badges_screen.dart';
 import '../legal/legal_screens.dart';
 import '../premium/analytics_screen.dart';
@@ -21,160 +22,228 @@ class SettingsScreen extends ConsumerWidget {
     final user = ref.watch(appUserProvider).value;
     final gam = ref.watch(gamificationProvider).value;
     final repo = ref.read(repoProvider);
+    var i = 0;
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        children: [
-          // ── Profile ──────────────────────────────────────────────────────
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: AppTheme.tealDark,
-              child: Text(
-                (user?.displayName.isEmpty ?? true)
-                    ? '?'
-                    : user!.displayName[0].toUpperCase(),
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-            title: Text(user?.displayName ?? '—'),
-            subtitle: Row(
-              children: [
-                Text(user?.premium == true ? 'Premium' : 'Free plan'),
-                if (user?.premium == true) ...[
-                  const SizedBox(width: 6),
-                  const Icon(Icons.verified,
-                      size: 14, color: AppTheme.teal),
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
+          children: [
+            const ScreenHeader(kicker: 'You', title: 'Settings'),
+            // ── Profile card ─────────────────────────────────────────────
+            WallCard(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppTheme.clayBright, AppTheme.clayDeep],
+                      ),
+                      borderRadius: BorderRadius.circular(17),
+                    ),
+                    child: Center(
+                      child: Text(
+                        (user?.displayName.isEmpty ?? true)
+                            ? '?'
+                            : user!.displayName[0].toUpperCase(),
+                        style: AppTheme.display(
+                            size: 22, color: AppTheme.ink950),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user?.displayName ?? '—',
+                            style: AppTheme.display(size: 18)),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            if (user?.premium == true) ...[
+                              const Icon(Icons.verified_rounded,
+                                  size: 14, color: AppTheme.goldSoft),
+                              const SizedBox(width: 4),
+                            ],
+                            Text(
+                              user?.premium == true
+                                  ? 'Premium'
+                                  : 'Free plan',
+                              style: AppTheme.body(
+                                  size: 12.5,
+                                  color: user?.premium == true
+                                      ? AppTheme.goldSoft
+                                      : AppTheme.ink400),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (user?.premium != true)
+                    TextButton(
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const PremiumScreen())),
+                      style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.goldSoft),
+                      child: const Text('Upgrade'),
+                    ),
                 ],
-              ],
-            ),
-            trailing: user?.premium != true
-                ? TextButton(
-                    onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const PremiumScreen())),
-                    child: const Text('Upgrade'))
-                : null,
-          ),
-          const Divider(),
+              ),
+            ).entrance(++i),
+            const SizedBox(height: 24),
 
-          // ── Privacy (DPDP Act 2023) ───────────────────────────────────────
-          const _SectionHeader('Your privacy (DPDP Act, 2023)'),
-          ListTile(
-            leading: const Icon(Icons.download_outlined),
-            title: const Text('Export my data'),
-            subtitle: const Text('Download everything we hold about you'),
-            onTap: () => _exportData(context, repo),
-          ),
-          ListTile(
-            leading: const Icon(Icons.shield_outlined),
-            title: const Text('Consent & audit log'),
-            subtitle: const Text('Where your data lives and why'),
-            onTap: () => _showAuditLog(context, user?.consentAt),
-          ),
-          ListTile(
-            leading:
-                const Icon(Icons.delete_forever, color: AppTheme.rose),
-            title: const Text('Delete account & data',
-                style: TextStyle(color: AppTheme.rose)),
-            subtitle:
-                const Text('Permanent erasure (right to be forgotten)'),
-            onTap: () => _confirmDelete(context, ref),
-          ),
-          const Divider(),
+            // ── Privacy (DPDP Act 2023) ──────────────────────────────────
+            SectionLabel('Your privacy · DPDP Act, 2023').entrance(++i),
+            _SettingsGroup(children: [
+              _SettingsTile(
+                icon: Icons.download_outlined,
+                title: 'Export my data',
+                subtitle: 'Download everything we hold about you',
+                onTap: () => _exportData(context, repo),
+              ),
+              _SettingsTile(
+                icon: Icons.shield_outlined,
+                title: 'Consent & audit log',
+                subtitle: 'Where your data lives and why',
+                onTap: () => _showAuditLog(context, user?.consentAt),
+              ),
+              _SettingsTile(
+                icon: Icons.delete_forever_outlined,
+                title: 'Delete account & data',
+                subtitle: 'Permanent erasure (right to be forgotten)',
+                destructive: true,
+                onTap: () => _confirmDelete(context, ref),
+              ),
+            ]).entrance(++i),
+            const SizedBox(height: 24),
 
-          // ── Gamification ──────────────────────────────────────────────────
-          const _SectionHeader('Achievements'),
-          ListTile(
-            leading: const Icon(Icons.emoji_events_outlined,
-                color: AppTheme.amber),
-            title: const Text('Badges & streaks'),
-            subtitle: Text(
-                '${gam?.badges.length ?? 0}/${kBadges.length} earned · '
-                '${gam?.streak.current ?? 0}-day streak'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const BadgesScreen())),
-          ),
-          ListTile(
-            leading: const Icon(Icons.show_chart, color: AppTheme.teal),
-            title: const Text('Trend analytics'),
-            subtitle: const Text('See how your scores change over time'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (user?.premium != true)
-                  const Chip(
-                      label: Text('Premium',
-                          style: TextStyle(fontSize: 11)),
-                      visualDensity: VisualDensity.compact),
-                const Icon(Icons.chevron_right),
-              ],
-            ),
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const AnalyticsScreen())),
-          ),
-          SwitchListTile(
-            secondary: const Icon(Icons.leaderboard_outlined),
-            title: const Text('Appear on leaderboards'),
-            subtitle: const Text(
-                'Show your scores in the Discover tab (opt-in)'),
-            value: gam?.leaderboardOptIn ?? false,
-            onChanged: (v) => repo.setLeaderboardOptIn(v),
-          ),
-          const Divider(),
+            // ── Achievements ─────────────────────────────────────────────
+            SectionLabel('Achievements').entrance(++i),
+            _SettingsGroup(children: [
+              _SettingsTile(
+                icon: Icons.emoji_events_outlined,
+                iconColor: AppTheme.gold,
+                title: 'Badges & streaks',
+                subtitle:
+                    '${gam?.badges.length ?? 0}/${kBadges.length} earned · ${gam?.streak.current ?? 0}-day streak',
+                chevron: true,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const BadgesScreen())),
+              ),
+              _SettingsTile(
+                icon: Icons.show_chart,
+                iconColor: AppTheme.clay,
+                title: 'Trends',
+                subtitle: 'How your scores change over time',
+                trailing: user?.premium != true
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color:
+                              AppTheme.gold.withValues(alpha: 0.13),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text('PREMIUM',
+                            style: AppTheme.body(
+                                size: 9,
+                                weight: FontWeight.w800,
+                                color: AppTheme.goldSoft,
+                                letterSpacing: 0.8)),
+                      )
+                    : null,
+                chevron: true,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AnalyticsScreen())),
+              ),
+              _SwitchTile(
+                icon: Icons.leaderboard_outlined,
+                title: 'Appear on leaderboards',
+                subtitle: 'Show your scores in Discover (opt-in)',
+                value: gam?.leaderboardOptIn ?? false,
+                onChanged: (v) {
+                  HapticFeedback.selectionClick();
+                  repo.setLeaderboardOptIn(v);
+                },
+              ),
+            ]).entrance(++i),
+            const SizedBox(height: 24),
 
-          // ── Safety ───────────────────────────────────────────────────────
-          const _SectionHeader('Safety'),
-          ListTile(
-            leading: const Icon(Icons.block),
-            title: const Text('Blocked users'),
-            onTap: () => _snack(context, 'No blocked users.'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.support_agent),
-            title: const Text('Grievance officer'),
-            subtitle:
-                const Text('grievance@thewall.app · 7-day response'),
-            onTap: () => _snack(context, 'Contact: grievance@thewall.app'),
-          ),
-          const Divider(),
+            // ── Safety ───────────────────────────────────────────────────
+            SectionLabel('Safety').entrance(++i),
+            _SettingsGroup(children: [
+              _SettingsTile(
+                icon: Icons.block_outlined,
+                title: 'Blocked users',
+                onTap: () => _snack(context, 'No blocked users.'),
+              ),
+              _SettingsTile(
+                icon: Icons.support_agent_outlined,
+                title: 'Grievance officer',
+                subtitle: 'grievance@thewall.app · 7-day response',
+                onTap: () =>
+                    _snack(context, 'Contact: grievance@thewall.app'),
+              ),
+            ]).entrance(++i),
+            const SizedBox(height: 24),
 
-          // ── Legal ────────────────────────────────────────────────────────
-          const _SectionHeader('Legal'),
-          ListTile(
-            leading: const Icon(Icons.privacy_tip_outlined),
-            title: const Text('Privacy Policy'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen())),
-          ),
-          ListTile(
-            leading: const Icon(Icons.description_outlined),
-            title: const Text('Terms of Use'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const TermsScreen())),
-          ),
-          const Divider(),
+            // ── Legal ────────────────────────────────────────────────────
+            SectionLabel('Legal').entrance(++i),
+            _SettingsGroup(children: [
+              _SettingsTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Privacy Policy',
+                chevron: true,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const PrivacyPolicyScreen())),
+              ),
+              _SettingsTile(
+                icon: Icons.description_outlined,
+                title: 'Terms of Use',
+                chevron: true,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const TermsScreen())),
+              ),
+            ]).entrance(++i),
+            const SizedBox(height: 24),
 
-          // ── Account ───────────────────────────────────────────────────────
-          const _SectionHeader('Account'),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Sign out'),
-            onTap: () => FirebaseAuth.instance.signOut(),
-          ),
-          const SizedBox(height: 24),
-          const Center(child: _AppVersionFooter()),
-          const SizedBox(height: 24),
-        ],
+            // ── Account ──────────────────────────────────────────────────
+            SectionLabel('Account').entrance(++i),
+            _SettingsGroup(children: [
+              _SettingsTile(
+                icon: Icons.logout,
+                title: 'Sign out',
+                onTap: () => FirebaseAuth.instance.signOut(),
+              ),
+            ]).entrance(++i),
+            const SizedBox(height: 28),
+            const Center(child: _AppVersionFooter()).entrance(++i),
+          ],
+        ),
       ),
     );
   }
 
-  void _snack(BuildContext context, String msg) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(BuildContext context, String msg) =>
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(msg)));
 
   Future<void> _exportData(
       BuildContext context, WallRepository repo) async {
@@ -201,7 +270,8 @@ class SettingsScreen extends ConsumerWidget {
                   Clipboard.setData(ClipboardData(text: json));
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Copied to clipboard.')));
+                      const SnackBar(
+                          content: Text('Copied to clipboard.')));
                 },
                 child: const Text('Copy'),
               ),
@@ -229,30 +299,33 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Consent & data audit'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (consentAt != null)
-              Text(
-                  'Consent given: ${consentAt.toLocal().toString().split('.').first}'),
-            const SizedBox(height: 12),
-            const Text('Where your data lives:',
-                style: TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            const Text('• users/{uid} — your profile (private to you)'),
-            const Text(
-                '• users/{uid}/inbox — feedback you received (private to you)'),
-            const Text(
-                '• walls/{phoneHash} — your public aggregate (scores + disclosed comments only)'),
-            const Text(
-                '• gamification/{uid} — your badges, streak, leaderboard score'),
-            const Text(
-                '• reviews/{id} — raw reviews (never readable by clients; Functions-only)'),
-            const SizedBox(height: 12),
-            const Text('All data stored in asia-south1 (Mumbai, India).',
-                style: TextStyle(color: AppTheme.slate300, fontSize: 12)),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (consentAt != null)
+                Text(
+                    'Consent given: ${consentAt.toLocal().toString().split('.').first}'),
+              const SizedBox(height: 12),
+              const Text('Where your data lives:',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              const Text('• users/{uid} — your profile (private to you)'),
+              const Text(
+                  '• users/{uid}/inbox — feedback you received (private to you)'),
+              const Text(
+                  '• walls/{phoneHash} — your public aggregate (scores + disclosed comments only)'),
+              const Text(
+                  '• gamification/{uid} — your badges, streak, leaderboard score'),
+              const Text(
+                  '• reviews/{id} — raw reviews (never readable by clients; Functions-only)'),
+              const SizedBox(height: 12),
+              Text('All data stored in asia-south1 (Mumbai, India).',
+                  style: AppTheme.body(
+                      size: 12, color: AppTheme.ink300)),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -277,8 +350,9 @@ class SettingsScreen extends ConsumerWidget {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: AppTheme.rose),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.rose,
+                minimumSize: const Size(120, 48)),
             onPressed: () async {
               Navigator.pop(context);
               await ref
@@ -295,6 +369,126 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
+// ─── Grouped tiles ────────────────────────────────────────────────────────────
+
+class _SettingsGroup extends StatelessWidget {
+  final List<Widget> children;
+  const _SettingsGroup({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <Widget>[];
+    for (var j = 0; j < children.length; j++) {
+      items.add(children[j]);
+      if (j != children.length - 1) {
+        items.add(const Divider(height: 1, indent: 56));
+      }
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.ink850,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.ink700),
+      ),
+      child: Column(children: items),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final bool destructive;
+  final bool chevron;
+  final Color? iconColor;
+  final Widget? trailing;
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.onTap,
+    this.destructive = false,
+    this.chevron = false,
+    this.iconColor,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = destructive
+        ? AppTheme.rose
+        : (iconColor ?? AppTheme.ink300);
+    return ListTile(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20)),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      leading: Icon(icon, color: c, size: 22),
+      title: Text(title,
+          style: AppTheme.body(
+              size: 14.5,
+              weight: FontWeight.w600,
+              color: destructive ? AppTheme.rose : AppTheme.paper)),
+      subtitle: subtitle == null
+          ? null
+          : Text(subtitle!,
+              style: AppTheme.body(
+                  size: 12, color: AppTheme.ink400, height: 1.35)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (trailing != null) trailing!,
+          if (chevron) ...[
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right,
+                color: AppTheme.ink600, size: 20),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SwitchTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  const _SwitchTile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) => SwitchListTile(
+        secondary: Icon(icon, color: AppTheme.ink300, size: 22),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        title: Text(title,
+            style: AppTheme.body(
+                size: 14.5,
+                weight: FontWeight.w600,
+                color: AppTheme.paper)),
+        subtitle: subtitle == null
+            ? null
+            : Text(subtitle!,
+                style: AppTheme.body(
+                    size: 12, color: AppTheme.ink400, height: 1.35)),
+        value: value,
+        onChanged: onChanged,
+      );
+}
+
 /// Footer showing data-residency note + the app version/build number.
 class _AppVersionFooter extends StatelessWidget {
   const _AppVersionFooter();
@@ -308,36 +502,21 @@ class _AppVersionFooter extends StatelessWidget {
             : '';
         return Column(
           children: [
-            const Text(
+            const BrickMark(size: 22, animate: false),
+            const SizedBox(height: 10),
+            Text(
               'The Wall · Data stored in India (asia-south1)',
-              style: TextStyle(color: AppTheme.slate500, fontSize: 12),
+              style: AppTheme.body(size: 12, color: AppTheme.ink400),
             ),
             if (v.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(v,
-                  style: const TextStyle(
-                      color: AppTheme.slate700, fontSize: 11)),
+                  style: AppTheme.body(
+                      size: 11, color: AppTheme.ink600)),
             ],
           ],
         );
       },
     );
   }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String text;
-  const _SectionHeader(this.text);
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(
-          text.toUpperCase(),
-          style: const TextStyle(
-              color: AppTheme.slate500,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5),
-        ),
-      );
 }

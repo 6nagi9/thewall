@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
+import '../../shared/wall_ui.dart';
 
 /// Phone OTP login. Truecaller One-Tap is a later enhancement (hook left below).
 class LoginScreen extends ConsumerStatefulWidget {
@@ -48,6 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _sendOtp() async {
+    HapticFeedback.lightImpact();
     setState(() {
       _sending = true;
       _error = null;
@@ -75,6 +79,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _verifyOtp() async {
     if (_verificationId == null) return;
+    HapticFeedback.lightImpact();
     setState(() {
       _verifying = true;
       _error = null;
@@ -99,87 +104,133 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Spacer(),
-              const Icon(Icons.dashboard_customize, color: AppTheme.teal, size: 56),
-              const SizedBox(height: 16),
-              const Text('The Wall',
-                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800)),
+              const BrickMark(size: 64),
+              const SizedBox(height: 24),
+              Text('The Wall', style: AppTheme.display(size: 38))
+                  .animate()
+                  .fadeIn(delay: 350.ms, duration: WallMotion.slow)
+                  .slideY(begin: 0.15, end: 0, delay: 350.ms),
               const SizedBox(height: 8),
-              const Text(
-                'Honest, structured feedback — on your terms.',
-                style: TextStyle(color: AppTheme.slate300, fontSize: 16),
+              Text(
+                'Honest feedback, brick by brick —\non your terms.',
+                style: AppTheme.body(
+                    size: 16.5, color: AppTheme.ink300, height: 1.45),
+              )
+                  .animate()
+                  .fadeIn(delay: 480.ms, duration: WallMotion.slow)
+                  .slideY(begin: 0.15, end: 0, delay: 480.ms),
+              const SizedBox(height: 44),
+              AnimatedSwitcher(
+                duration: WallMotion.med,
+                switchInCurve: WallMotion.ease,
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.05, 0),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
+                  ),
+                ),
+                child: otpStage ? _otpStage() : _phoneStage(),
               ),
-              const SizedBox(height: 40),
-              if (!otpStage) ...[
-                TextField(
-                  controller: _phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    prefixText: '+91  ',
-                    hintText: 'Mobile number',
-                    prefixIcon: Icon(Icons.phone),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _sending ? null : _sendOtp,
-                  child: _sending
-                      ? const _Spin()
-                      : const Text('Send OTP'),
-                ),
-              ] else ...[
-                Text('Enter the code sent to $_e164',
-                    style: const TextStyle(color: AppTheme.slate300)),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _otpCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    hintText: '6-digit code',
-                    prefixIcon: Icon(Icons.lock_outline),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _verifying ? null : _verifyOtp,
-                  child: _verifying ? const _Spin() : const Text('Verify & continue'),
-                ),
+              if (_error != null) ...[
+                const SizedBox(height: 14),
                 Row(
                   children: [
-                    TextButton(
-                      onPressed: () => setState(() => _verificationId = null),
-                      child: const Text('Change number'),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: (_resendIn > 0 || _sending) ? null : _sendOtp,
-                      child: Text(_resendIn > 0
-                          ? 'Resend in ${_resendIn}s'
-                          : 'Resend code'),
+                    const Icon(Icons.error_outline,
+                        color: AppTheme.rose, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(_error!,
+                          style: AppTheme.body(
+                              size: 13, color: AppTheme.rose)),
                     ),
                   ],
-                ),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(_error!, style: const TextStyle(color: AppTheme.rose)),
+                ).animate().shake(hz: 4, offset: const Offset(2, 0)),
               ],
               const Spacer(),
-              const Text(
-                'By continuing you confirm you are 18+ and agree to our '
-                'consent terms on the next screen.',
-                style: TextStyle(color: AppTheme.slate500, fontSize: 12),
-              ),
+              Text(
+                'By continuing you confirm you are 18+ and agree to our consent terms on the next screen.',
+                style: AppTheme.body(
+                    size: 12, color: AppTheme.ink400, height: 1.5),
+              ).animate().fadeIn(delay: 600.ms),
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _phoneStage() => Column(
+        key: const ValueKey('phone'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _phoneCtrl,
+            keyboardType: TextInputType.phone,
+            style: AppTheme.body(size: 16, color: AppTheme.paper),
+            decoration: const InputDecoration(
+              prefixText: '+91  ',
+              hintText: 'Mobile number',
+              prefixIcon: Icon(Icons.phone_outlined),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _sending ? null : _sendOtp,
+            child: _sending ? const _Spin() : const Text('Send OTP'),
+          ),
+        ],
+      );
+
+  Widget _otpStage() => Column(
+        key: const ValueKey('otp'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Enter the code sent to $_e164',
+              style: AppTheme.body(size: 14, color: AppTheme.ink300)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _otpCtrl,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            style: AppTheme.display(size: 22, letterSpacing: 6),
+            decoration: const InputDecoration(
+              hintText: '••••••',
+              prefixIcon: Icon(Icons.lock_outline),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _verifying ? null : _verifyOtp,
+            child:
+                _verifying ? const _Spin() : const Text('Verify & continue'),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              TextButton(
+                onPressed: () => setState(() => _verificationId = null),
+                child: const Text('Change number'),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: (_resendIn > 0 || _sending) ? null : _sendOtp,
+                child: Text(_resendIn > 0
+                    ? 'Resend in ${_resendIn}s'
+                    : 'Resend code'),
+              ),
+            ],
+          ),
+        ],
+      );
 }
 
 class _Spin extends StatelessWidget {
@@ -188,6 +239,7 @@ class _Spin extends StatelessWidget {
   Widget build(BuildContext context) => const SizedBox(
         height: 22,
         width: 22,
-        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.slate900),
+        child: CircularProgressIndicator(
+            strokeWidth: 2, color: AppTheme.ink950),
       );
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -8,6 +10,7 @@ import '../../core/phone_hash.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../data/repositories.dart';
+import '../../shared/wall_ui.dart';
 
 class GiveFeedbackScreen extends ConsumerStatefulWidget {
   const GiveFeedbackScreen({super.key});
@@ -30,6 +33,7 @@ class _GiveFeedbackScreenState extends ConsumerState<GiveFeedbackScreen> {
   void _open() {
     final phone = _phoneCtrl.text.trim();
     if (phone.isEmpty) return;
+    HapticFeedback.lightImpact();
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => _ComposeFeedback(
         targetName:
@@ -68,30 +72,35 @@ class _GiveFeedbackScreenState extends ConsumerState<GiveFeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(appUserProvider).value;
+    final given = user?.giveToGetCount ?? 0;
+    final cleared = user?.gateCleared ?? false;
+    var i = 0;
     return Scaffold(
-      appBar: AppBar(title: const Text('Give Feedback')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
+          children: [
+            const ScreenHeader(
+              kicker: 'Lay a brick',
+              title: 'Give feedback',
+            ),
+            WallCard(
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Who do you want to give feedback to?',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'You can only review people you know — pick a contact '
-                    'or enter their number.',
-                    style: TextStyle(
-                        color: AppTheme.slate500, fontSize: 12),
+                  Text('Who is it for?', style: AppTheme.display(size: 18)),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Only people you actually know — pick a contact or enter their number.',
+                    style: AppTheme.body(
+                        size: 13, color: AppTheme.ink400, height: 1.45),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 18),
                   TextField(
                     controller: _nameCtrl,
+                    textCapitalization: TextCapitalization.words,
                     decoration: const InputDecoration(
                       labelText: 'Their name (optional)',
                       prefixIcon: Icon(Icons.person_outline),
@@ -106,47 +115,78 @@ class _GiveFeedbackScreenState extends ConsumerState<GiveFeedbackScreen> {
                       prefixIcon: Icon(Icons.phone_outlined),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
                         child: ElevatedButton(
-                            onPressed: _open,
-                            child: const Text('Continue')),
+                          onPressed: _open,
+                          child: const Text('Continue'),
+                        ),
                       ),
                       const SizedBox(width: 10),
-                      OutlinedButton.icon(
-                        onPressed: _pickFromContacts,
-                        icon: const Icon(Icons.contacts_outlined, size: 18),
-                        label: const Text('Contacts'),
+                      SizedBox(
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: _pickFromContacts,
+                          icon: const Icon(Icons.contacts_outlined,
+                              size: 18),
+                          label: const Text('Contacts'),
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+            ).entrance(++i),
+            const SizedBox(height: 14),
+            WallCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.bolt, color: AppTheme.amber),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'You\'ve given ${user?.giveToGetCount ?? 0}/'
-                      '${K.giveToGetThreshold} pieces of feedback. '
-                      '${(user?.gateCleared ?? false) ? "Your Wall is unlocked!" : "Reach ${K.giveToGetThreshold} to unlock your Wall."}',
-                      style: const TextStyle(color: AppTheme.slate300),
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        cleared
+                            ? Icons.celebration_outlined
+                            : Icons.bolt_rounded,
+                        color: cleared ? AppTheme.sage : AppTheme.gold,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        cleared ? 'Wall unlocked' : 'Building your wall',
+                        style: AppTheme.body(
+                            size: 14.5,
+                            weight: FontWeight.w700,
+                            color: AppTheme.paper),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '$given/${K.giveToGetThreshold}',
+                        style: AppTheme.display(
+                            size: 16, color: AppTheme.clay),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  BrickProgress(
+                      filled: given.clamp(0, K.giveToGetThreshold),
+                      total: K.giveToGetThreshold),
+                  const SizedBox(height: 10),
+                  Text(
+                    cleared
+                        ? 'You can see everything on your wall. Keep giving — honest feedback keeps the community alive.'
+                        : 'Each brick you lay for others builds your own wall. ${K.giveToGetThreshold - given} to go.',
+                    style: AppTheme.body(
+                        size: 12.5, color: AppTheme.ink400, height: 1.5),
                   ),
                 ],
               ),
-            ),
-          ),
-        ],
+            ).entrance(++i),
+          ],
+        ),
       ),
     );
   }
@@ -185,6 +225,7 @@ class _ComposeFeedbackState extends ConsumerState<_ComposeFeedback> {
 
   Future<void> _submit() async {
     if (_commentError != null) return;
+    HapticFeedback.mediumImpact();
     setState(() => _submitting = true);
     final draft = FeedbackDraft(
       targetPhoneHash: PhoneHash.of(widget.targetPhone),
@@ -202,8 +243,7 @@ class _ComposeFeedbackState extends ConsumerState<_ComposeFeedback> {
       if (res.ok && res.escrowed) {
         await _sendInvite();
       } else if (res.ok) {
-        _toast('Feedback sent to ${widget.targetName}.');
-        Navigator.pop(context);
+        await _celebrate();
       } else {
         _toast(res.reason ?? 'Feedback was rejected by moderation.');
       }
@@ -212,6 +252,24 @@ class _ComposeFeedbackState extends ConsumerState<_ComposeFeedback> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  /// Full-screen "brick laid" moment before popping back.
+  Future<void> _celebrate() async {
+    HapticFeedback.heavyImpact();
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'done',
+      barrierColor: AppTheme.ink950.withValues(alpha: 0.92),
+      transitionDuration: WallMotion.med,
+      pageBuilder: (context, anim, secondary) => _BrickLaidOverlay(
+        name: widget.targetName,
+      ),
+      transitionBuilder: (context, anim, secondary, child) =>
+          FadeTransition(opacity: anim, child: child),
+    );
+    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _sendInvite() async {
@@ -232,133 +290,244 @@ class _ComposeFeedbackState extends ConsumerState<_ComposeFeedback> {
 
   @override
   Widget build(BuildContext context) {
+    var i = 0;
     return Scaffold(
-      appBar: AppBar(title: Text('Feedback for ${widget.targetName}')),
+      appBar: AppBar(title: Text('For ${widget.targetName}')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
         children: [
-          for (final d in FeedbackDimension.all)
-            _DimSlider(
+          Text(
+            'Rate honestly — they\'ll see patterns, not your individual scores.',
+            style: AppTheme.body(
+                size: 13, color: AppTheme.ink400, height: 1.5),
+          ).entrance(i),
+          const SizedBox(height: 18),
+          for (final d in FeedbackDimension.all) ...[
+            _DimRating(
               dim: d,
               value: _dims[d.key]!,
-              onChanged: (v) => setState(() => _dims[d.key] = v),
-            ),
-          const SizedBox(height: 8),
-          const Text('Tags',
-              style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
+              onChanged: (v) {
+                HapticFeedback.selectionClick();
+                setState(() => _dims[d.key] = v);
+              },
+            ).entrance(++i),
+            const SizedBox(height: 18),
+          ],
+          SectionLabel('What stands out about them?').entrance(++i),
           Wrap(
             spacing: 8,
-            runSpacing: 4,
+            runSpacing: 8,
             children: FeedbackTags.all.map((t) {
               final sel = _tags.contains(t);
-              return FilterChip(
-                label: Text(t),
+              return TagChip(
+                label: t,
                 selected: sel,
-                onSelected: (v) =>
-                    setState(() => v ? _tags.add(t) : _tags.remove(t)),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => sel ? _tags.remove(t) : _tags.add(t));
+                },
               );
             }).toList(),
-          ),
-          const SizedBox(height: 16),
-          const Text('Context',
-              style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
+          ).entrance(++i),
+          const SizedBox(height: 22),
+          SectionLabel('How do you know them?').entrance(++i),
           Wrap(
             spacing: 8,
-            children: ContextTag.all.map((c) {
-              return ChoiceChip(
-                label: Text(c),
-                selected: _context == c,
-                onSelected: (v) =>
-                    setState(() => _context = v ? c : null),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
+            runSpacing: 8,
+            children: ContextTag.all
+                .map((c) => TagChip(
+                      label: c,
+                      selected: _context == c,
+                      accent: AppTheme.gold,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(
+                            () => _context = _context == c ? null : c);
+                      },
+                    ))
+                .toList(),
+          ).entrance(++i),
+          const SizedBox(height: 22),
+          SectionLabel('In your own words').entrance(++i),
           TextField(
             controller: _commentCtrl,
             maxLength: K.maxCommentLength,
-            maxLines: 3,
+            maxLines: 4,
             onChanged: _onCommentChanged,
             decoration: InputDecoration(
-              labelText: 'Constructive comment (optional)',
               hintText:
                   'Be specific and kind — framed as your own experience.',
               errorText: _commentError,
             ),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _anonymous,
-            onChanged: (v) => setState(() => _anonymous = v),
-            title: const Text('Stay anonymous to them'),
-            subtitle: const Text(
-                'Only applies once they\'ve joined. Invites you send by '
-                'SMS reveal your number.',
-                style: TextStyle(fontSize: 11)),
-          ),
-          const SizedBox(height: 16),
+          ).entrance(++i),
+          const SizedBox(height: 6),
+          WallCard(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _anonymous,
+              onChanged: (v) {
+                HapticFeedback.selectionClick();
+                setState(() => _anonymous = v);
+              },
+              title: Text('Stay anonymous to them',
+                  style: AppTheme.body(
+                      size: 14,
+                      weight: FontWeight.w600,
+                      color: AppTheme.paper)),
+              subtitle: Text(
+                'Only applies once they\'ve joined. Invites you send by SMS reveal your number.',
+                style:
+                    AppTheme.body(size: 11.5, color: AppTheme.ink400),
+              ),
+            ),
+          ).entrance(++i),
+          const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: (_commentError == null && !_submitting) ? _submit : null,
+            onPressed:
+                (_commentError == null && !_submitting) ? _submit : null,
             child: _submitting
                 ? const SizedBox(
                     height: 22,
                     width: 22,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppTheme.slate900))
-                : const Text('Submit feedback'),
-          ),
+                        strokeWidth: 2, color: AppTheme.ink950))
+                : const Text('Lay this brick'),
+          ).entrance(++i),
         ],
       ),
     );
   }
 }
 
-// ─── Dimension slider ─────────────────────────────────────────────────────────
+// ─── Dimension rating (tappable bricks, not sliders) ─────────────────────────
 
-class _DimSlider extends StatelessWidget {
+class _DimRating extends StatelessWidget {
   final FeedbackDimension dim;
   final int value;
   final ValueChanged<int> onChanged;
-  const _DimSlider(
+  const _DimRating(
       {required this.dim, required this.value, required this.onChanged});
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+  Widget build(BuildContext context) => WallCard(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Text(dim.label,
-                    style:
-                        const TextStyle(fontWeight: FontWeight.w700)),
+                    style: AppTheme.body(
+                        size: 14.5,
+                        weight: FontWeight.w700,
+                        color: AppTheme.paper)),
                 const Spacer(),
-                Text('$value/5',
-                    style: const TextStyle(color: AppTheme.teal)),
+                AnimatedSwitcher(
+                  duration: WallMotion.fast,
+                  transitionBuilder: (child, anim) => ScaleTransition(
+                      scale: anim,
+                      child: FadeTransition(opacity: anim, child: child)),
+                  child: Text(
+                    '$value/5',
+                    key: ValueKey(value),
+                    style: AppTheme.display(
+                        size: 16, color: AppTheme.clay),
+                  ),
+                ),
               ],
             ),
-            Slider(
-              value: value.toDouble(),
-              min: 1,
-              max: 5,
-              divisions: 4,
-              label: '$value',
-              onChanged: (v) => onChanged(v.round()),
-            ),
+            const SizedBox(height: 12),
+            RatingBricks(value: value, onChanged: onChanged),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(dim.lowLabel,
-                    style: const TextStyle(
-                        color: AppTheme.slate500, fontSize: 11)),
+                    style: AppTheme.body(
+                        size: 11, color: AppTheme.ink400)),
                 Text(dim.highLabel,
-                    style: const TextStyle(
-                        color: AppTheme.slate500, fontSize: 11)),
+                    style: AppTheme.body(
+                        size: 11, color: AppTheme.ink400)),
               ],
             ),
           ],
         ),
       );
+}
+
+// ─── Brick laid celebration ───────────────────────────────────────────────────
+
+class _BrickLaidOverlay extends StatelessWidget {
+  final String name;
+  const _BrickLaidOverlay({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppTheme.clayBright, AppTheme.clayDeep],
+                  ),
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.clay.withValues(alpha: .45),
+                      blurRadius: 40,
+                      offset: const Offset(0, 14),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.check_rounded,
+                    color: AppTheme.ink950, size: 48),
+              )
+                  .animate()
+                  .scale(
+                    begin: const Offset(0.3, 0.3),
+                    end: const Offset(1, 1),
+                    duration: WallMotion.slow,
+                    curve: WallMotion.spring,
+                  )
+                  .then()
+                  .shake(hz: 3, rotation: 0.015, duration: 300.ms),
+              const SizedBox(height: 24),
+              Text('Brick laid',
+                      style: AppTheme.display(size: 26))
+                  .animate()
+                  .fadeIn(delay: 250.ms, duration: WallMotion.med)
+                  .slideY(begin: 0.2, end: 0, delay: 250.ms),
+              const SizedBox(height: 8),
+              Text(
+                'Your feedback is on its way to $name.',
+                style: AppTheme.body(size: 14, color: AppTheme.ink300),
+                textAlign: TextAlign.center,
+              )
+                  .animate()
+                  .fadeIn(delay: 400.ms, duration: WallMotion.med),
+              const SizedBox(height: 28),
+              Text('Tap anywhere to continue',
+                      style: AppTheme.body(
+                          size: 12, color: AppTheme.ink400))
+                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                  .fade(begin: 0.4, end: 1, duration: 900.ms),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

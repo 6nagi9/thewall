@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/badge_definitions.dart';
@@ -7,6 +8,7 @@ import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../data/repositories.dart';
+import '../../shared/wall_ui.dart';
 import '../gamification/badges_screen.dart';
 import '../feedback/request_feedback_screen.dart';
 import '../premium/premium_screen.dart';
@@ -22,106 +24,113 @@ class MyWallScreen extends ConsumerWidget {
     final gam = ref.watch(gamificationProvider).value;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Wall'),
-        actions: [
-          if (user != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Center(
-                  child: _OpennessBadge(label: wall?.opennessLabel ?? 'New')),
-            ),
-        ],
-      ),
-      body: feedbackAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (feedback) {
-          final gateCleared = user?.gateCleared ?? false;
-          final isPremium = user?.premium ?? false;
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _Header(name: user?.displayName ?? '', count: feedback.length),
-              const SizedBox(height: 16),
-
-              // ── Give-to-get soft gate ─────────────────────────────────────
-              if (!gateCleared)
-                _SoftGateCard(
+      body: SafeArea(
+        bottom: false,
+        child: feedbackAsync.when(
+          loading: () => const WallLoader(),
+          error: (e, _) => Center(
+            child: Text('Error: $e', style: AppTheme.body()),
+          ),
+          data: (feedback) {
+            final gateCleared = user?.gateCleared ?? false;
+            final isPremium = user?.premium ?? false;
+            var i = 0;
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
+              children: [
+                _Header(
+                  name: user?.displayName ?? '',
                   count: feedback.length,
-                  given: user?.giveToGetCount ?? 0,
-                  onAccessData: () =>
-                      ref.read(repoProvider).requestDataAccess(),
-                )
-              else ...[
-                // ── Dimension summary ───────────────────────────────────────
-                if (wall != null && wall.meetsMinN) ...[
-                  _DimensionSummary(wall: wall),
-                  const SizedBox(height: 12),
-                ],
-
-                // ── Premium: coaching prompts ───────────────────────────────
-                if (isPremium && wall != null && wall.meetsMinN)
-                  _CoachingCard(wall: wall),
-
-                // ── Premium: cohort comparison ──────────────────────────────
-                if (isPremium && wall != null && wall.meetsMinN) ...[
-                  const SizedBox(height: 12),
-                  _CohortCard(wall: wall),
-                ],
-
-                // ── Premium upsell banner ───────────────────────────────────
-                if (!isPremium) ...[
-                  const SizedBox(height: 12),
-                  _PremiumBanner(
-                    onTap: () => Navigator.push(context,
-                        MaterialPageRoute(
-                            builder: (_) => const PremiumScreen())),
-                  ),
-                ],
-
-                const SizedBox(height: 16),
-
-                // ── Badges mini section ─────────────────────────────────────
-                _BadgesMiniSection(
-                  badges: gam?.badges ?? [],
-                  onViewAll: () => Navigator.push(context,
-                      MaterialPageRoute(
-                          builder: (_) => const BadgesScreen())),
+                  opennessLabel: wall?.opennessLabel ?? 'New',
                 ),
-                const SizedBox(height: 16),
-
-                // ── Request feedback campaign ───────────────────────────────
-                if (isPremium)
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.push(context,
+                const SizedBox(height: 20),
+                if (!gateCleared)
+                  _SoftGateCard(
+                    count: feedback.length,
+                    given: user?.giveToGetCount ?? 0,
+                    onAccessData: () =>
+                        ref.read(repoProvider).requestDataAccess(),
+                  ).entrance(++i)
+                else ...[
+                  if (wall != null && wall.meetsMinN) ...[
+                    _DimensionSummary(wall: wall).entrance(++i),
+                    const SizedBox(height: 14),
+                  ],
+                  if (isPremium && wall != null && wall.meetsMinN) ...[
+                    _CoachingCard(wall: wall).entrance(++i),
+                    const SizedBox(height: 14),
+                    _CohortCard(wall: wall).entrance(++i),
+                    const SizedBox(height: 14),
+                  ],
+                  if (!isPremium) ...[
+                    _PremiumBanner(
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const PremiumScreen())),
+                    ).entrance(++i),
+                    const SizedBox(height: 14),
+                  ],
+                  _BadgesMiniSection(
+                    badges: gam?.badges ?? [],
+                    onViewAll: () => Navigator.push(
+                        context,
                         MaterialPageRoute(
-                            builder: (_) =>
-                                const RequestFeedbackScreen())),
-                    icon: const Icon(Icons.campaign_outlined),
-                    label: const Text('Request targeted feedback'),
-                  ),
-
-                const SizedBox(height: 16),
-
-                // ── Received feedback list ──────────────────────────────────
-                Text('Feedback you\'ve received (${feedback.length})',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                if (feedback.isEmpty)
-                  const _EmptyInbox()
-                else
-                  ...feedback.map((f) => _FeedbackCard(
-                        f: f,
-                        onToggle: (v) =>
-                            ref.read(repoProvider).setDisclosure(f.id, v),
-                        onDispute: () => _dispute(context, ref, f.id),
-                      )),
+                            builder: (_) => const BadgesScreen())),
+                  ).entrance(++i),
+                  if (isPremium) ...[
+                    const SizedBox(height: 14),
+                    WallCard(
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const RequestFeedbackScreen())),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.campaign_outlined,
+                              color: AppTheme.clay),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text('Request targeted feedback',
+                                style: AppTheme.body(
+                                    size: 15,
+                                    weight: FontWeight.w600,
+                                    color: AppTheme.paper)),
+                          ),
+                          const Icon(Icons.arrow_forward_rounded,
+                              color: AppTheme.ink400, size: 20),
+                        ],
+                      ),
+                    ).entrance(++i),
+                  ],
+                  const SizedBox(height: 26),
+                  SectionLabel('Bricks on your wall · ${feedback.length}')
+                      .entrance(++i),
+                  if (feedback.isEmpty)
+                    const EmptyState(
+                      icon: Icons.grid_view_rounded,
+                      title: 'No bricks yet',
+                      message:
+                          'Every piece of feedback is a brick on your wall. '
+                          'Invite people you trust to lay the first one.',
+                    ).entrance(++i)
+                  else
+                    ...feedback.map((f) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _FeedbackCard(
+                            f: f,
+                            onToggle: (v) => ref
+                                .read(repoProvider)
+                                .setDisclosure(f.id, v),
+                            onDispute: () => _dispute(context, ref, f.id),
+                          ).entrance(++i),
+                        )),
+                ],
               ],
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -139,6 +148,10 @@ class MyWallScreen extends ConsumerWidget {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(120, 48),
+              backgroundColor: AppTheme.rose,
+            ),
             onPressed: () {
               ref.read(repoProvider).fileDispute(id, 'inaccurate');
               Navigator.pop(context);
@@ -156,39 +169,59 @@ class MyWallScreen extends ConsumerWidget {
 class _Header extends StatelessWidget {
   final String name;
   final int count;
-  const _Header({required this.name, required this.count});
+  final String opennessLabel;
+  const _Header({
+    required this.name,
+    required this.count,
+    required this.opennessLabel,
+  });
+
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
+  Widget build(BuildContext context) {
+    final first = name.trim().isEmpty ? 'there' : name.trim().split(' ').first;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'YOUR WALL',
+                  style: AppTheme.body(
+                    size: 11.5,
+                    weight: FontWeight.w700,
+                    color: AppTheme.clay,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text('Hi, $first', style: AppTheme.display(size: 30)),
+                const SizedBox(height: 4),
+                Text(
+                  count == 0
+                      ? 'Your wall is waiting for its first brick.'
+                      : '$count ${count == 1 ? "brick" : "bricks"} laid by people who know you.',
+                  style: AppTheme.body(size: 13.5, color: AppTheme.ink400),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: AppTheme.tealDark,
-                child: Text(
-                  name.isEmpty ? '?' : name[0].toUpperCase(),
-                  style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name,
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w700)),
-                    Text('$count piece(s) of feedback',
-                        style: const TextStyle(color: AppTheme.slate300)),
-                  ],
-                ),
-              ),
+              const BrickMark(size: 40),
+              const SizedBox(height: 8),
+              _OpennessBadge(label: opennessLabel),
             ],
           ),
-        ),
-      );
+        ],
+      ),
+    ).entrance(0);
+  }
 }
 
 // ─── Soft gate ───────────────────────────────────────────────────────────────
@@ -197,62 +230,98 @@ class _SoftGateCard extends StatelessWidget {
   final int count;
   final int given;
   final VoidCallback onAccessData;
-  const _SoftGateCard(
-      {required this.count,
-      required this.given,
-      required this.onAccessData});
+  const _SoftGateCard({
+    required this.count,
+    required this.given,
+    required this.onAccessData,
+  });
 
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
+  Widget build(BuildContext context) {
+    final remaining = (K.giveToGetThreshold - given).clamp(0, 999);
+    return WallCard(
+      padding: const EdgeInsets.all(24),
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [AppTheme.ink850, AppTheme.ink800],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              const Icon(Icons.lock_outline, color: AppTheme.amber, size: 40),
-              const SizedBox(height: 12),
-              Text(
-                '$count ${count == 1 ? "person" : "people"} wrote about you',
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
-              ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    5,
-                    (i) => Icon(Icons.star,
-                        color:
-                            i < 3 ? AppTheme.amber : AppTheme.slate700,
-                        size: 32),
-                  ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.clay.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                child:
+                    const Icon(Icons.lock_outline, color: AppTheme.clay),
               ),
-              const SizedBox(height: 16),
-              LinearProgressIndicator(
-                value: (given / K.giveToGetThreshold).clamp(0.0, 1.0),
-                backgroundColor: AppTheme.slate700,
-                color: AppTheme.teal,
-                minHeight: 8,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Give feedback to ${K.giveToGetThreshold - given} more '
-                'contact(s) to unlock your Wall',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppTheme.slate300),
-              ),
-              const SizedBox(height: 16),
-              TextButton.icon(
-                onPressed: onAccessData,
-                icon: const Icon(Icons.shield_outlined, size: 18),
-                label: const Text('Access my data now (Privacy right)'),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  count == 0
+                      ? 'Your wall is sealed'
+                      : '$count ${count == 1 ? "person has" : "people have"} written about you',
+                  style: AppTheme.display(size: 20),
+                ),
               ),
             ],
           ),
-        ),
-      );
+          const SizedBox(height: 18),
+          // Blurred tease of what's behind the gate.
+          ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+            child: Row(
+              children: List.generate(
+                5,
+                (i) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: i < 3 ? AppTheme.gold : AppTheme.ink700,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'LAY YOUR FIRST BRICKS',
+            style: AppTheme.body(
+              size: 11,
+              weight: FontWeight.w700,
+              color: AppTheme.ink400,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          BrickProgress(filled: given, total: K.giveToGetThreshold),
+          const SizedBox(height: 12),
+          Text(
+            remaining == 0
+                ? 'Unlocking your wall…'
+                : 'Give feedback to $remaining more ${remaining == 1 ? "person" : "people"} to open your wall. Honest in, honest out.',
+            style: AppTheme.body(
+                size: 13.5, color: AppTheme.ink300, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          TextButton.icon(
+            onPressed: onAccessData,
+            icon: const Icon(Icons.shield_outlined, size: 18),
+            label: const Text('Access my data now (privacy right)'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Dimension summary ────────────────────────────────────────────────────────
@@ -260,42 +329,42 @@ class _SoftGateCard extends StatelessWidget {
 class _DimensionSummary extends StatelessWidget {
   final Wall wall;
   const _DimensionSummary({required this.wall});
+
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Your strengths',
-                  style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
-              ...FeedbackDimension.all.map((d) {
-                final v = wall.dimensionAverages[d.key] ?? 0;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    children: [
-                      SizedBox(width: 120, child: Text(d.label)),
-                      Expanded(
-                        child: LinearProgressIndicator(
-                          value: (v / 5).clamp(0.0, 1.0),
-                          backgroundColor: AppTheme.slate700,
-                          color: AppTheme.teal,
-                          minHeight: 8,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(v.toStringAsFixed(1)),
-                    ],
+  Widget build(BuildContext context) {
+    return WallCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('How people see you', style: AppTheme.display(size: 18)),
+          const SizedBox(height: 16),
+          ...FeedbackDimension.all.map((d) {
+            final v = wall.dimensionAverages[d.key] ?? 0;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 116,
+                    child: Text(d.label,
+                        style: AppTheme.body(
+                            size: 13.5,
+                            weight: FontWeight.w600,
+                            color: AppTheme.ink200)),
                   ),
-                );
-              }),
-            ],
-          ),
-        ),
-      );
+                  Expanded(
+                      child: WallProgress(value: v / 5)),
+                  const SizedBox(width: 10),
+                  ScorePill(v),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Coaching prompts (Premium) ───────────────────────────────────────────────
@@ -323,47 +392,48 @@ class _CoachingCard extends StatelessWidget {
         .whereType<String>()
         .toList();
     if (tips.isEmpty) return const SizedBox.shrink();
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: const [
-                Icon(Icons.lightbulb_outline, color: AppTheme.amber),
-                SizedBox(width: 8),
-                Text('Coaching tips',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700)),
-                Spacer(),
-                Chip(
-                  label: Text('Premium',
-                      style: TextStyle(fontSize: 11, color: AppTheme.teal)),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
+    return WallCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.lightbulb_outline,
+                  color: AppTheme.gold, size: 20),
+              const SizedBox(width: 8),
+              Text('Coaching tips', style: AppTheme.display(size: 17)),
+              const Spacer(),
+              const _PremiumTag(),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...tips.map((t) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: AppTheme.gold,
+                        borderRadius: BorderRadius.circular(2.5),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(t,
+                          style: AppTheme.body(
+                              size: 13.5,
+                              color: AppTheme.ink300,
+                              height: 1.5)),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ...tips.map((t) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.arrow_right, size: 18,
-                          color: AppTheme.teal),
-                      const SizedBox(width: 6),
-                      Expanded(
-                          child: Text(t,
-                              style: const TextStyle(
-                                  color: AppTheme.slate300,
-                                  fontSize: 13))),
-                    ],
-                  ),
-                )),
-          ],
-        ),
+              )),
+        ],
       ),
     );
   }
@@ -376,59 +446,88 @@ class _CohortCard extends StatelessWidget {
   const _CohortCard({required this.wall});
 
   String _label(double score) {
-    if (score >= 4.5) return 'top 10%';
-    if (score >= 4.0) return 'top 25%';
-    if (score >= 3.5) return 'top 50%';
-    return 'below average — keep going!';
+    if (score >= 4.5) return 'Top 10%';
+    if (score >= 4.0) return 'Top 25%';
+    if (score >= 3.5) return 'Top 50%';
+    return 'Climbing';
   }
 
+  Color _color(double score) =>
+      score >= 4.0 ? AppTheme.sage : (score >= 3.5 ? AppTheme.gold : AppTheme.ink400);
+
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    return WallCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: const [
-                  Icon(Icons.people_outline, color: AppTheme.teal),
-                  SizedBox(width: 8),
-                  Text('Cohort comparison',
-                      style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700)),
-                  Spacer(),
-                  Chip(
-                    label: Text('Premium',
-                        style:
-                            TextStyle(fontSize: 11, color: AppTheme.teal)),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              ...FeedbackDimension.all.map((d) {
-                final v = wall.dimensionAverages[d.key] ?? 0;
-                if (v == 0) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                          width: 110,
-                          child: Text(d.label,
-                              style: const TextStyle(fontSize: 13))),
-                      const SizedBox(width: 8),
-                      Text(_label(v),
-                          style: const TextStyle(
-                              color: AppTheme.teal,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                );
-              }),
+              const Icon(Icons.people_outline,
+                  color: AppTheme.clay, size: 20),
+              const SizedBox(width: 8),
+              Text('Among your peers', style: AppTheme.display(size: 17)),
+              const Spacer(),
+              const _PremiumTag(),
             ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: FeedbackDimension.all.map((d) {
+              final v = wall.dimensionAverages[d.key] ?? 0;
+              if (v == 0) return const SizedBox.shrink();
+              final c = _color(v);
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: c.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: c.withValues(alpha: 0.35)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(d.label,
+                        style: AppTheme.body(
+                            size: 11.5, color: AppTheme.ink300)),
+                    const SizedBox(height: 2),
+                    Text(_label(v),
+                        style: AppTheme.body(
+                            size: 14, weight: FontWeight.w800, color: c)),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PremiumTag extends StatelessWidget {
+  const _PremiumTag();
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppTheme.gold.withValues(alpha: 0.13),
+          borderRadius: BorderRadius.circular(7),
+          border:
+              Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
+        ),
+        child: Text(
+          'PREMIUM',
+          style: AppTheme.body(
+            size: 9.5,
+            weight: FontWeight.w800,
+            color: AppTheme.goldSoft,
+            letterSpacing: 1,
           ),
         ),
       );
@@ -439,39 +538,54 @@ class _CohortCard extends StatelessWidget {
 class _PremiumBanner extends StatelessWidget {
   final VoidCallback onTap;
   const _PremiumBanner({required this.onTap});
+
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: const [
-                Icon(Icons.workspace_premium_outlined,
-                    color: AppTheme.amber, size: 28),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Unlock Premium',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700)),
-                      Text(
-                          'Coaching tips, cohort comparison, trend charts & more.',
-                          style: TextStyle(
-                              color: AppTheme.slate300,
-                              fontSize: 12)),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: AppTheme.slate500),
+  Widget build(BuildContext context) {
+    return WallCard(
+      onTap: onTap,
+      borderColor: AppTheme.gold.withValues(alpha: 0.35),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppTheme.gold.withValues(alpha: 0.10),
+          AppTheme.ink850,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.gold.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.workspace_premium_outlined,
+                color: AppTheme.goldSoft, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Go deeper with Premium',
+                    style: AppTheme.body(
+                        size: 15,
+                        weight: FontWeight.w700,
+                        color: AppTheme.paper)),
+                const SizedBox(height: 2),
+                Text('Coaching, peer comparison, trends & more.',
+                    style: AppTheme.body(
+                        size: 12.5, color: AppTheme.ink400)),
               ],
             ),
           ),
-        ),
-      );
+          const Icon(Icons.arrow_forward_rounded,
+              color: AppTheme.goldSoft, size: 20),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Badges mini section ──────────────────────────────────────────────────────
@@ -479,59 +593,95 @@ class _PremiumBanner extends StatelessWidget {
 class _BadgesMiniSection extends StatelessWidget {
   final List<BadgeEarned> badges;
   final VoidCallback onViewAll;
-  const _BadgesMiniSection(
-      {required this.badges, required this.onViewAll});
+  const _BadgesMiniSection({required this.badges, required this.onViewAll});
 
   @override
   Widget build(BuildContext context) {
     final earnedIds = badges.map((b) => b.id).toSet();
-    final shown = kBadges
-        .where((d) => earnedIds.contains(d.id))
-        .take(4)
-        .toList();
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text('Badges',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700)),
-                const Spacer(),
-                TextButton(
-                    onPressed: onViewAll,
-                    child: Text(
-                        '${earnedIds.length}/${kBadges.length} — View all')),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (shown.isEmpty)
-              const Text(
-                'No badges yet — give feedback to start earning!',
-                style: TextStyle(color: AppTheme.slate500, fontSize: 13),
-              )
-            else
-              Row(
-                children: shown
-                    .map((d) => Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: Column(
-                            children: [
-                              Icon(d.icon, color: d.color, size: 28),
-                              const SizedBox(height: 4),
-                              Text(d.label,
-                                  style: const TextStyle(fontSize: 10),
-                                  textAlign: TextAlign.center),
-                            ],
-                          ),
-                        ))
-                    .toList(),
+    final shown =
+        kBadges.where((d) => earnedIds.contains(d.id)).take(4).toList();
+    return WallCard(
+      onTap: onViewAll,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Badges', style: AppTheme.display(size: 17)),
+              const Spacer(),
+              Text(
+                '${earnedIds.length}/${kBadges.length}',
+                style: AppTheme.body(
+                    size: 13,
+                    weight: FontWeight.w700,
+                    color: AppTheme.clay),
               ),
-          ],
-        ),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_forward_rounded,
+                  color: AppTheme.clay, size: 16),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (shown.isEmpty)
+            Text(
+              'No badges yet — give feedback to start earning.',
+              style: AppTheme.body(size: 13, color: AppTheme.ink400),
+            )
+          else
+            Row(
+              children: shown
+                  .asMap()
+                  .entries
+                  .map((e) => Padding(
+                        padding: const EdgeInsets.only(right: 14),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: e.value.color
+                                    .withValues(alpha: 0.13),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: e.value.color
+                                      .withValues(alpha: 0.4),
+                                ),
+                              ),
+                              child: Icon(e.value.icon,
+                                  color: e.value.color, size: 26),
+                            )
+                                .animate()
+                                .scale(
+                                  begin: const Offset(0.5, 0.5),
+                                  end: const Offset(1, 1),
+                                  delay: Duration(
+                                      milliseconds: 100 * e.key + 300),
+                                  duration: WallMotion.slow,
+                                  curve: WallMotion.spring,
+                                )
+                                .fadeIn(
+                                    delay: Duration(
+                                        milliseconds: 100 * e.key + 300)),
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              width: 56,
+                              child: Text(
+                                e.value.label,
+                                style: AppTheme.body(
+                                    size: 9.5, color: AppTheme.ink300),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ))
+                  .toList(),
+            ),
+        ],
       ),
     );
   }
@@ -543,94 +693,161 @@ class _FeedbackCard extends StatelessWidget {
   final ReceivedFeedback f;
   final ValueChanged<bool> onToggle;
   final VoidCallback onDispute;
-  const _FeedbackCard(
-      {required this.f, required this.onToggle, required this.onDispute});
+  const _FeedbackCard({
+    required this.f,
+    required this.onToggle,
+    required this.onDispute,
+  });
+
+  double get _avg => f.dimensions.isEmpty
+      ? 0
+      : f.dimensions.values.reduce((a, b) => a + b) / f.dimensions.length;
 
   @override
   Widget build(BuildContext context) {
     final underReview = f.status == 'under_review';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.person, color: AppTheme.slate500, size: 18),
-                const SizedBox(width: 6),
-                Text(f.authorName ?? 'Anonymous',
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                if (f.contextTag != null) ...[
-                  const SizedBox(width: 8),
-                  Chip(
-                    label: Text(f.contextTag!,
-                        style: const TextStyle(fontSize: 11)),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
+    return WallCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.clay.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    (f.authorName ?? 'A')[0].toUpperCase(),
+                    style: AppTheme.display(
+                        size: 16, color: AppTheme.clay),
                   ),
-                ],
-                const Spacer(),
-                if (underReview)
-                  const Text('Under review',
-                      style: TextStyle(
-                          color: AppTheme.amber, fontSize: 12)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 4,
-              children: f.dimensions.entries.map((e) {
-                final dim = FeedbackDimension.all.firstWhere(
-                    (d) => d.key == e.key,
-                    orElse: () =>
-                        FeedbackDimension(e.key, e.key, '', ''));
-                return Text('${dim.label}: ${e.value}/5',
-                    style: const TextStyle(
-                        color: AppTheme.slate300, fontSize: 13));
-              }).toList(),
-            ),
-            if (f.tags.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                children: f.tags
-                    .map((t) => Chip(
-                          label: Text(t,
-                              style: const TextStyle(fontSize: 11)),
-                          visualDensity: VisualDensity.compact,
-                        ))
-                    .toList(),
+                ),
               ),
-            ],
-            if (f.comment != null && f.comment!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text('"${f.comment}"',
-                  style:
-                      const TextStyle(fontStyle: FontStyle.italic)),
-            ],
-            const Divider(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: f.disclosed,
-                    onChanged: underReview ? null : onToggle,
-                    title: const Text('Show on public Wall',
-                        style: TextStyle(fontSize: 13)),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(f.authorName ?? 'Anonymous',
+                        style: AppTheme.body(
+                            size: 14.5,
+                            weight: FontWeight.w700,
+                            color: AppTheme.paper)),
+                    if (f.contextTag != null)
+                      Text(f.contextTag!,
+                          style: AppTheme.body(
+                              size: 11.5, color: AppTheme.ink400)),
+                  ],
+                ),
+              ),
+              if (underReview)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.gold.withValues(alpha: 0.13),
+                    borderRadius: BorderRadius.circular(7),
                   ),
+                  child: Text('UNDER REVIEW',
+                      style: AppTheme.body(
+                          size: 9.5,
+                          weight: FontWeight.w800,
+                          color: AppTheme.goldSoft,
+                          letterSpacing: 0.8)),
+                )
+              else
+                ScorePill(_avg),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: f.dimensions.entries.map((e) {
+              final dim = FeedbackDimension.all.firstWhere(
+                  (d) => d.key == e.key,
+                  orElse: () => FeedbackDimension(e.key, e.key, '', ''));
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppTheme.ink800,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                IconButton(
-                  onPressed: underReview ? null : onDispute,
-                  icon: const Icon(Icons.flag_outlined, size: 20),
-                  tooltip: 'Dispute',
+                child: Text(
+                  '${dim.label} ${e.value}/5',
+                  style: AppTheme.body(
+                      size: 12, color: AppTheme.ink300),
                 ),
-              ],
+              );
+            }).toList(),
+          ),
+          if (f.tags.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: f.tags
+                  .map((t) => Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color:
+                              AppTheme.clay.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        child: Text(t,
+                            style: AppTheme.body(
+                                size: 11.5, color: AppTheme.clay)),
+                      ))
+                  .toList(),
             ),
           ],
-        ),
+          if (f.comment != null && f.comment!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.ink900,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                '“${f.comment}”',
+                style: AppTheme.body(
+                    size: 13.5,
+                    color: AppTheme.ink200,
+                    height: 1.55),
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: f.disclosed,
+                  onChanged: underReview ? null : onToggle,
+                  title: Text('Show on public wall',
+                      style: AppTheme.body(
+                          size: 13, color: AppTheme.ink300)),
+                ),
+              ),
+              IconButton(
+                onPressed: underReview ? null : onDispute,
+                icon: const Icon(Icons.flag_outlined, size: 20),
+                color: AppTheme.ink400,
+                tooltip: 'Dispute',
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -643,41 +860,25 @@ class _OpennessBadge extends StatelessWidget {
   const _OpennessBadge({required this.label});
   @override
   Widget build(BuildContext context) => Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: AppTheme.tealDark.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.teal),
+          color: AppTheme.sage.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(100),
+          border:
+              Border.all(color: AppTheme.sage.withValues(alpha: 0.4)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.visibility, size: 14, color: AppTheme.teal),
-            const SizedBox(width: 4),
+            const Icon(Icons.visibility_outlined,
+                size: 13, color: AppTheme.sage),
+            const SizedBox(width: 5),
             Text(label,
-                style: const TextStyle(
-                    color: AppTheme.teal,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
+                style: AppTheme.body(
+                    size: 11.5,
+                    weight: FontWeight.w700,
+                    color: AppTheme.sage)),
           ],
-        ),
-      );
-}
-
-// ─── Empty inbox ──────────────────────────────────────────────────────────────
-
-class _EmptyInbox extends StatelessWidget {
-  const _EmptyInbox();
-  @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: Center(
-          child: Text(
-            'No feedback yet — invite your connections to get started.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.slate500),
-          ),
         ),
       );
 }

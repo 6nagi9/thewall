@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Wall — Redesign Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="mock.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  html, body, #root { height: 100%; margin: 0; }
+  .swatch-board { display: flex; flex-direction: column; gap: 16px; padding: 22px; height: 100%; box-sizing: border-box; background: var(--ink950); font-family: var(--body); }
+  .sw-row { display: flex; gap: 8px; }
+  .sw { flex: 1; border-radius: 12px; display: flex; align-items: flex-end; padding: 8px; font-size: 9.5px; font-weight: 700; color: rgba(0,0,0,.55); min-height: 56px; }
+  .sw.dark { color: var(--ink300); border: 1px solid var(--ink700); }
+  .type-line { color: var(--paper); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+function TokensBoard() {
+  return (
+    <div className="swatch-board">
+      <div>
+        <div className="kicker">Clay &amp; Ink</div>
+        <div className="type-line" style={{ fontFamily: 'var(--display)', fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', marginTop: 6 }}>
+          Bricolage Grotesque
+        </div>
+        <div style={{ color: 'var(--ink300)', fontSize: 14, marginTop: 4 }}>
+          Schibsted Grotesk for body &amp; UI text.
+        </div>
+      </div>
+      <div className="sw-row">
+        <span className="sw" style={{ background: 'var(--clay-bright)' }}>clayBright</span>
+        <span className="sw" style={{ background: 'var(--clay)' }}>clay</span>
+        <span className="sw" style={{ background: 'var(--clay-deep)' }}>clayDeep</span>
+      </div>
+      <div className="sw-row">
+        <span className="sw" style={{ background: 'var(--gold)' }}>gold</span>
+        <span className="sw" style={{ background: 'var(--sage)' }}>sage</span>
+        <span className="sw" style={{ background: 'var(--rose)' }}>rose</span>
+      </div>
+      <div className="sw-row">
+        <span className="sw dark" style={{ background: 'var(--ink950)' }}>ink950</span>
+        <span className="sw dark" style={{ background: 'var(--ink850)' }}>ink850</span>
+        <span className="sw dark" style={{ background: 'var(--ink700)' }}>ink700</span>
+        <span className="sw" style={{ background: 'var(--paper)' }}>paper</span>
+      </div>
+      <div style={{ color: 'var(--ink400)', fontSize: 12, lineHeight: 1.6 }}>
+        Motion: springy entrances (easeOutBack), staggered list reveals, brick-laying
+        progress, haptics on every selection. Radius 16–20, hairline ink700 borders.
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="system" title="Design system — Clay & Ink" subtitle="New tokens in lib/core/theme.dart · shared kit in lib/shared/wall_ui.dart">
+        <DCArtboard id="tokens" label="Tokens" width={420} height={480}>
+          <TokensBoard />
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="onboarding" title="Onboarding" subtitle="walkthrough_screen.dart · login_screen.dart">
+        <DCArtboard id="walk" label="Walkthrough" width={300} height={620}><ScreenWalkthrough /></DCArtboard>
+        <DCArtboard id="login" label="Login (OTP)" width={300} height={620}><ScreenLogin /></DCArtboard>
+      </DCSection>
+      <DCSection id="core" title="Core loop" subtitle="my_wall_screen.dart · give_feedback_screen.dart">
+        <DCArtboard id="locked" label="My Wall · soft gate" width={300} height={620}><ScreenWallLocked /></DCArtboard>
+        <DCArtboard id="open" label="My Wall · unlocked" width={300} height={620}><ScreenWallOpen /></DCArtboard>
+        <DCArtboard id="compose" label="Give feedback" width={300} height={620}><ScreenCompose /></DCArtboard>
+        <DCArtboard id="celebrate" label="Brick laid ✓" width={300} height={620}><ScreenCelebrate /></DCArtboard>
+      </DCSection>
+      <DCSection id="rest" title="Discover · Premium · Settings" subtitle="discover_screen.dart · premium_screen.dart · settings_screen.dart">
+        <DCArtboard id="discover" label="Discover" width={300} height={620}><ScreenDiscover /></DCArtboard>
+        <DCArtboard id="premium" label="Premium" width={300} height={620}><ScreenPremium /></DCArtboard>
+        <DCArtboard id="settings" label="Settings" width={300} height={620}><ScreenSettings /></DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

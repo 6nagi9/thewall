@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
+import '../../shared/wall_ui.dart';
 
 /// B1 — Feedback campaigns: the owner solicits targeted feedback from
 /// specific people. Fully consent-forward and DPDP-ideal (owner initiates).
@@ -32,12 +34,12 @@ class _RequestFeedbackScreenState
       _snack('Pick at least one focus area.');
       return;
     }
+    HapticFeedback.mediumImpact();
     setState(() => _loading = true);
     try {
       final result = await ref.read(repoProvider).requestFeedback(
-            message: _msgCtrl.text.trim().isEmpty
-                ? null
-                : _msgCtrl.text.trim(),
+            message:
+                _msgCtrl.text.trim().isEmpty ? null : _msgCtrl.text.trim(),
             focusDimensions: _dims.toList(),
           );
       if (!mounted) return;
@@ -62,62 +64,58 @@ class _RequestFeedbackScreenState
 
   @override
   Widget build(BuildContext context) {
+    var i = 0;
     return Scaffold(
-      appBar: AppBar(title: const Text('Request Feedback')),
+      appBar: AppBar(title: const Text('Request feedback')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Ask for feedback that matters to you.',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'Choose which areas to focus on, write an optional personal '
-                    'message, and share the campaign link with people you trust. '
-                    'Only people who have joined The Wall can respond.',
-                    style: TextStyle(
-                        color: AppTheme.slate300, fontSize: 13),
-                  ),
-                ],
-              ),
+          WallCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ask for feedback that matters to you.',
+                    style: AppTheme.display(size: 19)),
+                const SizedBox(height: 8),
+                Text(
+                  'Choose focus areas, write an optional note, and share the '
+                  'link with people you trust. Only members of The Wall can respond.',
+                  style: AppTheme.body(
+                      size: 13, color: AppTheme.ink300, height: 1.5),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
-          const Text('Focus areas',
-              style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
+          ).entrance(++i),
+          const SizedBox(height: 22),
+          SectionLabel('Focus areas').entrance(++i),
           Wrap(
             spacing: 8,
-            runSpacing: 4,
+            runSpacing: 8,
             children: FeedbackDimension.all.map((d) {
               final sel = _dims.contains(d.key);
-              return FilterChip(
-                label: Text(d.label),
+              return TagChip(
+                label: d.label,
                 selected: sel,
-                onSelected: (v) => setState(
-                    () => v ? _dims.add(d.key) : _dims.remove(d.key)),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(
+                      () => sel ? _dims.remove(d.key) : _dims.add(d.key));
+                },
               );
             }).toList(),
-          ),
-          const SizedBox(height: 20),
+          ).entrance(++i),
+          const SizedBox(height: 22),
+          SectionLabel('Personal message').entrance(++i),
           TextField(
             controller: _msgCtrl,
             maxLength: 200,
             maxLines: 3,
             decoration: const InputDecoration(
-              labelText: 'Personal message (optional)',
               hintText:
                   'e.g. "I would love your take on my communication style."',
             ),
-          ),
+          ).entrance(++i),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: _loading ? null : _launch,
@@ -126,10 +124,10 @@ class _RequestFeedbackScreenState
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppTheme.slate900))
-                : const Icon(Icons.send_outlined),
-            label: const Text('Generate & share campaign link'),
-          ),
+                        strokeWidth: 2, color: AppTheme.ink950))
+                : const Icon(Icons.send_outlined, size: 19),
+            label: const Text('Generate & share link'),
+          ).entrance(++i),
         ],
       ),
     );

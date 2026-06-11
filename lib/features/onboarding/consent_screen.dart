@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
+import '../../shared/wall_ui.dart';
 import '../legal/legal_screens.dart';
 
 /// DPDP consent + 18+ gate + claim-your-wall. Mandatory, non-skippable.
@@ -30,6 +32,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
       _consent && _age && _nameCtrl.text.trim().isNotEmpty && !_saving;
 
   Future<void> _claim() async {
+    HapticFeedback.mediumImpact();
     setState(() {
       _saving = true;
       _error = null;
@@ -50,106 +53,143 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var i = 0;
     return Scaffold(
-      appBar: AppBar(title: const Text('Claim your Wall')),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          const Text('Before we begin',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 16),
-          const _ConsentPoint(
-            icon: Icons.lock_outline,
-            text: 'We collect your phone number and the structured feedback '
-                'you give and receive. Nothing else.',
-          ),
-          const _ConsentPoint(
-            icon: Icons.visibility_off_outlined,
-            text: 'You control your Wall. Feedback others write stays private '
-                'until YOU choose to make it public.',
-          ),
-          const _ConsentPoint(
-            icon: Icons.contacts_outlined,
-            text: 'Contacts are hashed on your device — we never store your '
-                'raw address book.',
-          ),
-          const _ConsentPoint(
-            icon: Icons.delete_outline,
-            text: 'You can export or permanently delete all your data at any '
-                'time from Settings.',
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _nameCtrl,
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              labelText: 'Your display name',
-              prefixIcon: Icon(Icons.person_outline),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          children: [
+            const ScreenHeader(
+              kicker: 'One last thing',
+              title: 'Claim your wall',
             ),
-          ),
-          const SizedBox(height: 8),
-          CheckboxListTile(
-            value: _age,
-            onChanged: (v) => setState(() => _age = v ?? false),
-            controlAffinity: ListTileControlAffinity.leading,
-            title: const Text('I confirm I am 18 years or older.'),
-          ),
-          CheckboxListTile(
-            value: _consent,
-            onChanged: (v) => setState(() => _consent = v ?? false),
-            controlAffinity: ListTileControlAffinity.leading,
-            title: const Text(
-                'I consent to The Wall processing my data for the purposes '
-                'described above (DPDP Act, 2023).'),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 12),
-            child: Wrap(
+            Text(
+              'The Wall only works because everyone agrees to the same rules. '
+              'Here\'s exactly what we do with your data:',
+              style: AppTheme.body(
+                  size: 14, color: AppTheme.ink300, height: 1.55),
+            ).entrance(++i),
+            const SizedBox(height: 20),
+            _ConsentPoint(
+              icon: Icons.lock_outline,
+              title: 'Minimal data',
+              text:
+                  'Your phone number and the structured feedback you give and receive. Nothing else.',
+            ).entrance(++i),
+            _ConsentPoint(
+              icon: Icons.visibility_off_outlined,
+              title: 'You control disclosure',
+              text:
+                  'Feedback others write stays private until YOU choose to make it public.',
+            ).entrance(++i),
+            _ConsentPoint(
+              icon: Icons.contacts_outlined,
+              title: 'Contacts never leave your device',
+              text:
+                  'They\'re hashed on-device — we never store your raw address book.',
+            ).entrance(++i),
+            _ConsentPoint(
+              icon: Icons.delete_outline,
+              title: 'Leave anytime',
+              text:
+                  'Export or permanently delete all your data from Settings.',
+            ).entrance(++i),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _nameCtrl,
+              onChanged: (_) => setState(() {}),
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Your display name',
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+            ).entrance(++i),
+            const SizedBox(height: 12),
+            WallCard(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 2),
+              child: Column(
+                children: [
+                  CheckboxListTile(
+                    value: _age,
+                    onChanged: (v) {
+                      HapticFeedback.selectionClick();
+                      setState(() => _age = v ?? false);
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: Text('I confirm I am 18 years or older.',
+                        style: AppTheme.body(
+                            size: 14, color: AppTheme.ink100)),
+                  ),
+                  const Divider(height: 1),
+                  CheckboxListTile(
+                    value: _consent,
+                    onChanged: (v) {
+                      HapticFeedback.selectionClick();
+                      setState(() => _consent = v ?? false);
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: Text(
+                      'I consent to The Wall processing my data for the purposes described above (DPDP Act, 2023).',
+                      style: AppTheme.body(
+                          size: 14, color: AppTheme.ink100, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ).entrance(++i),
+            const SizedBox(height: 12),
+            Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Text('Read our ',
-                    style: TextStyle(color: AppTheme.slate500, fontSize: 13)),
+                Text('Read our ',
+                    style: AppTheme.body(
+                        size: 13, color: AppTheme.ink400)),
                 GestureDetector(
                   onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (_) => const PrivacyPolicyScreen())),
-                  child: const Text('Privacy Policy',
-                      style: TextStyle(
-                          color: AppTheme.teal,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600)),
+                  child: Text('Privacy Policy',
+                      style: AppTheme.body(
+                          size: 13,
+                          weight: FontWeight.w700,
+                          color: AppTheme.clay)),
                 ),
-                const Text(' and ',
-                    style: TextStyle(color: AppTheme.slate500, fontSize: 13)),
+                Text(' and ',
+                    style: AppTheme.body(
+                        size: 13, color: AppTheme.ink400)),
                 GestureDetector(
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const TermsScreen())),
-                  child: const Text('Terms of Use',
-                      style: TextStyle(
-                          color: AppTheme.teal,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600)),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const TermsScreen())),
+                  child: Text('Terms of Use',
+                      style: AppTheme.body(
+                          size: 13,
+                          weight: FontWeight.w700,
+                          color: AppTheme.clay)),
                 ),
               ],
-            ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!, style: const TextStyle(color: AppTheme.rose)),
+            ).entrance(++i),
+            if (_error != null) ...[
+              const SizedBox(height: 10),
+              Text(_error!,
+                  style: AppTheme.body(size: 13, color: AppTheme.rose)),
+            ],
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _canProceed ? _claim : null,
+              child: _saving
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppTheme.ink950))
+                  : const Text('Claim my wall'),
+            ).entrance(++i),
           ],
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _canProceed ? _claim : null,
-            child: _saving
-                ? const SizedBox(
-                    height: 22,
-                    width: 22,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppTheme.slate900))
-                : const Text('Claim my Wall'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -157,19 +197,46 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
 class _ConsentPoint extends StatelessWidget {
   final IconData icon;
+  final String title;
   final String text;
-  const _ConsentPoint({required this.icon, required this.text});
+  const _ConsentPoint({
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
+
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.only(bottom: 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: AppTheme.teal, size: 22),
-            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                color: AppTheme.clay.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: AppTheme.clay, size: 19),
+            ),
+            const SizedBox(width: 13),
             Expanded(
-              child: Text(text,
-                  style: const TextStyle(color: AppTheme.slate300, height: 1.4)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: AppTheme.body(
+                          size: 14,
+                          weight: FontWeight.w700,
+                          color: AppTheme.paper)),
+                  const SizedBox(height: 2),
+                  Text(text,
+                      style: AppTheme.body(
+                          size: 13,
+                          color: AppTheme.ink300,
+                          height: 1.45)),
+                ],
+              ),
             ),
           ],
         ),

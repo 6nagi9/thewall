@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/prefs.dart';
 import '../../core/theme.dart';
+import '../../shared/wall_ui.dart';
 
 /// First-launch intro carousel. Shown once (before login) to explain the
 /// consent-first, owner-controlled model. Completion is persisted in prefs;
@@ -20,26 +23,30 @@ class _WalkthroughScreenState extends ConsumerState<WalkthroughScreen> {
 
   static const _slides = <_Slide>[
     _Slide(
-      icon: Icons.dashboard_customize,
-      title: 'Claim your Wall',
+      icon: Icons.grid_view_rounded,
+      kicker: 'WELCOME',
+      title: 'Claim your wall',
       body: 'Honest, structured feedback from the people who know you — '
-          'on your terms, in one place.',
+          'each one a brick, on your terms, in one place.',
     ),
     _Slide(
       icon: Icons.visibility_outlined,
+      kicker: 'CONSENT FIRST',
       title: "You're in control",
       body: 'Everything others write about you stays private until YOU '
-          'choose what to make public on your Wall.',
+          'choose what to make public on your wall.',
     ),
     _Slide(
-      icon: Icons.insights_outlined,
+      icon: Icons.trending_up_rounded,
+      kicker: 'A MIRROR, NOT A SCORE',
       title: 'Grow with insight',
       body: 'See your strengths, track streaks, and watch your growth and '
-          'openness scores improve over time.',
+          'openness improve over time.',
     ),
     _Slide(
-      icon: Icons.lock_outline,
-      title: 'Private by design',
+      icon: Icons.lock_outline_rounded,
+      kicker: 'PRIVATE BY DESIGN',
+      title: 'Your data is yours',
       body: 'Contacts are hashed on your device, never stored raw. Export or '
           'permanently delete your data anytime (DPDP Act, 2023).',
     ),
@@ -59,12 +66,13 @@ class _WalkthroughScreenState extends ConsumerState<WalkthroughScreen> {
   }
 
   void _next() {
+    HapticFeedback.lightImpact();
     if (_isLast) {
       _finish();
     } else {
       _controller.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+        duration: WallMotion.med,
+        curve: WallMotion.emphasized,
       );
     }
   }
@@ -75,33 +83,46 @@ class _WalkthroughScreenState extends ConsumerState<WalkthroughScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _finish,
-                child: const Text('Skip'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
+              child: Row(
+                children: [
+                  const BrickMark(size: 30, animate: false),
+                  const SizedBox(width: 10),
+                  Text('The Wall', style: AppTheme.display(size: 17)),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _finish,
+                    child: const Text('Skip'),
+                  ),
+                ],
               ),
             ),
             Expanded(
               child: PageView.builder(
                 controller: _controller,
                 itemCount: _slides.length,
-                onPageChanged: (i) => setState(() => _page = i),
+                onPageChanged: (i) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _page = i);
+                },
                 itemBuilder: (_, i) => _SlideView(slide: _slides[i]),
               ),
             ),
             const SizedBox(height: 8),
+            // Brick-shaped page dots.
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(_slides.length, (i) {
                 final active = i == _page;
                 return AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
+                  duration: WallMotion.med,
+                  curve: WallMotion.emphasized,
                   margin: const EdgeInsets.symmetric(horizontal: 4),
-                  height: 8,
-                  width: active ? 24 : 8,
+                  height: 10,
+                  width: active ? 30 : 10,
                   decoration: BoxDecoration(
-                    color: active ? AppTheme.teal : AppTheme.slate700,
+                    color: active ? AppTheme.clay : AppTheme.ink700,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
@@ -114,7 +135,13 @@ class _WalkthroughScreenState extends ConsumerState<WalkthroughScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _next,
-                  child: Text(_isLast ? 'Get started' : 'Next'),
+                  child: AnimatedSwitcher(
+                    duration: WallMotion.fast,
+                    child: Text(
+                      _isLast ? 'Get started' : 'Next',
+                      key: ValueKey(_isLast),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -127,9 +154,15 @@ class _WalkthroughScreenState extends ConsumerState<WalkthroughScreen> {
 
 class _Slide {
   final IconData icon;
+  final String kicker;
   final String title;
   final String body;
-  const _Slide({required this.icon, required this.title, required this.body});
+  const _Slide({
+    required this.icon,
+    required this.kicker,
+    required this.title,
+    required this.body,
+  });
 }
 
 class _SlideView extends StatelessWidget {
@@ -139,34 +172,108 @@ class _SlideView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 36),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 120,
-            width: 120,
-            decoration: BoxDecoration(
-              color: AppTheme.tealDark.withValues(alpha: 0.25),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(slide.icon, size: 56, color: AppTheme.teal),
+          // Icon tile sitting on a faint brick lattice.
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 168,
+                height: 168,
+                child: CustomPaint(painter: _BrickLatticePainter()),
+              ),
+              Container(
+                height: 96,
+                width: 96,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppTheme.ink800, AppTheme.ink850],
+                  ),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AppTheme.ink700),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.clay.withValues(alpha: 0.14),
+                      blurRadius: 36,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Icon(slide.icon, size: 44, color: AppTheme.clay),
+              )
+                  .animate()
+                  .scale(
+                    begin: const Offset(0.7, 0.7),
+                    end: const Offset(1, 1),
+                    duration: WallMotion.slow,
+                    curve: WallMotion.spring,
+                  )
+                  .fadeIn(duration: WallMotion.med),
+            ],
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 36),
+          Text(
+            slide.kicker,
+            style: AppTheme.body(
+              size: 12,
+              weight: FontWeight.w700,
+              color: AppTheme.clay,
+              letterSpacing: 1.6,
+            ),
+          ).animate().fadeIn(delay: 120.ms, duration: WallMotion.med),
+          const SizedBox(height: 10),
           Text(
             slide.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 16),
+            style: AppTheme.display(size: 32, height: 1.1),
+          )
+              .animate()
+              .fadeIn(delay: 200.ms, duration: WallMotion.slow)
+              .slideY(begin: 0.12, end: 0, delay: 200.ms, curve: WallMotion.ease),
+          const SizedBox(height: 14),
           Text(
             slide.body,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: AppTheme.slate300, fontSize: 16, height: 1.5),
-          ),
+            style: AppTheme.body(
+                size: 15.5, color: AppTheme.ink300, height: 1.6),
+          )
+              .animate()
+              .fadeIn(delay: 320.ms, duration: WallMotion.slow)
+              .slideY(begin: 0.12, end: 0, delay: 320.ms, curve: WallMotion.ease),
         ],
       ),
     );
   }
+}
+
+/// Faint offset-brick pattern behind the walkthrough icon.
+class _BrickLatticePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppTheme.ink700.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    const rows = 4;
+    final rowH = size.height / rows;
+    final brickW = size.width / 3;
+    for (var r = 0; r < rows; r++) {
+      final offset = r.isOdd ? brickW / 2 : 0.0;
+      for (var c = -1; c < 4; c++) {
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(c * brickW + offset + 2, r * rowH + 2,
+              brickW - 4, rowH - 4),
+          const Radius.circular(6),
+        );
+        canvas.drawRRect(rect, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

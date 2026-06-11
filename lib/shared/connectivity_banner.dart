@@ -29,16 +29,17 @@ class ConnectivityBanner extends ConsumerWidget {
                   width: double.infinity,
                   color: AppTheme.rose,
                   padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.wifi_off, size: 16, color: Colors.white),
-                      SizedBox(width: 8),
+                      const Icon(Icons.wifi_off,
+                          size: 16, color: AppTheme.ink950),
+                      const SizedBox(width: 8),
                       Text('No internet connection',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600)),
+                          style: AppTheme.body(
+                              size: 13,
+                              weight: FontWeight.w700,
+                              color: AppTheme.ink950)),
                     ],
                   ),
                 )
