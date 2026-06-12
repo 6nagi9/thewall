@@ -449,16 +449,23 @@ class WallLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // NB: use the Animate widget directly rather than the `.animate()`
+    // extension — BrickMark has its own `bool animate` field, which shadows
+    // the flutter_animate extension on a BrickMark instance.
     return Center(
-      child: const BrickMark(size: 44, animate: false)
-          .animate(onPlay: (c) => c.repeat(reverse: true))
-          .fade(begin: 0.35, end: 1, duration: 700.ms)
-          .scale(
+      child: Animate(
+        onPlay: (c) => c.repeat(reverse: true),
+        effects: [
+          FadeEffect(begin: 0.35, end: 1, duration: 700.ms),
+          ScaleEffect(
             begin: const Offset(0.92, 0.92),
             end: const Offset(1, 1),
             duration: 700.ms,
             curve: Curves.easeInOut,
           ),
+        ],
+        child: const BrickMark(size: 44, animate: false),
+      ),
     );
   }
 }
@@ -530,7 +537,7 @@ class ScreenHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     ).entrance(0);

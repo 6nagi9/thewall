@@ -532,7 +532,7 @@ class _SettingsTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (trailing != null) trailing!,
+          ?trailing,
           if (chevron) ...[
             const SizedBox(width: 6),
             const Icon(Icons.chevron_right,

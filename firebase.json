@@ -1,1 +1,72 @@
-{"firestore":{"rules":"firestore.rules","indexes":"firestore.indexes.json"},"hosting":{"public":"marketing","ignore":["firebase.json","**/.*","**/node_modules/**"],"cleanUrls":true,"trailingSlash":false},"functions":[{"source":"functions","codebase":"default","runtime":"nodejs20","ignore":["node_modules",".git","*.log"]}],"emulators":{"auth":{"port":9099},"functions":{"port":5001},"firestore":{"port":8080},"ui":{"enabled":true,"port":4000},"singleProjectMode":true},"flutter":{"platforms":{"android":{"default":{"projectId":"the-wall-app-260609","appId":"1:102675326351:android:8a11f0923cb884af0a97fa","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"the-wall-app-260609","appId":"1:102675326351:ios:1b0b9d7564b15e260a97fa","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"the-wall-app-260609","configurations":{"android":"1:102675326351:android:8a11f0923cb884af0a97fa","ios":"1:102675326351:ios:1b0b9d7564b15e260a97fa"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": "marketing",
+    "ignore": ["firebase.json", "**/node_modules/**"],
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "appAssociation": "AUTO",
+    "rewrites": [
+      { "source": "/i/**", "destination": "/invite.html" },
+      { "source": "/r/**", "destination": "/respond.html" },
+      { "source": "/c/**", "destination": "/circle.html" },
+      {
+        "source": "/w/**",
+        "function": { "functionId": "webWall", "region": "asia-south1" }
+      }
+    ],
+    "headers": [
+      {
+        "source": "/.well-known/apple-app-site-association",
+        "headers": [{ "key": "Content-Type", "value": "application/json" }]
+      }
+    ]
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs20",
+      "ignore": ["node_modules", ".git", "*.log"]
+    }
+  ],
+  "emulators": {
+    "auth": { "port": 9099 },
+    "functions": { "port": 5001 },
+    "firestore": { "port": 8080 },
+    "hosting": { "port": 5000 },
+    "ui": { "enabled": true, "port": 4000 },
+    "singleProjectMode": true
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "the-wall-app-260609",
+          "appId": "1:102675326351:android:8a11f0923cb884af0a97fa",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "the-wall-app-260609",
+          "appId": "1:102675326351:ios:1b0b9d7564b15e260a97fa",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "the-wall-app-260609",
+          "configurations": {
+            "android": "1:102675326351:android:8a11f0923cb884af0a97fa",
+            "ios": "1:102675326351:ios:1b0b9d7564b15e260a97fa"
+          }
+        }
+      }
+    }
+  }
+}

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../shared/connectivity_banner.dart';
-import '../../shared/wall_ui.dart';
 import '../my_wall/my_wall_screen.dart';
 import '../feedback/give_feedback_screen.dart';
 import '../discover/discover_screen.dart';

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.thewall.wall",
+      "sha256_cert_fingerprints": [
+        "14:C6:14:64:E1:B8:F8:CA:E7:99:DA:A7:E4:6F:75:A8:3E:5C:77:ED:91:F6:4B:FF:55:E5:FC:F5:39:30:06:8E"
+      ]
+    }
+  }
+]

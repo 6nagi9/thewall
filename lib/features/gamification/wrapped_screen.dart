@@ -20,20 +20,17 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
   final GlobalKey _cardKey = GlobalKey();
   bool _sharing = false;
 
-  Future<void> _share({required bool whatsApp}) async {
+  Future<void> _share() async {
     setState(() => _sharing = true);
     try {
-      final text = 'My Wall, wrapped 🧱 — see what people who know me say. '
-          'Claim your own wall: ${K.webBase}';
-      if (whatsApp) {
-        // Image + WhatsApp deep link can't combine reliably; share the image
-        // through the sheet (WhatsApp is in it) for the richer post.
-        await shareWidgetAsImage(_cardKey,
-            filename: 'wall-wrapped.png', text: text);
-      } else {
-        await shareWidgetAsImage(_cardKey,
-            filename: 'wall-wrapped.png', text: text);
-      }
+      // Image goes through the native sheet (WhatsApp is in it) — a wa.me
+      // deep link can't carry an image, so the sheet is the richer post.
+      await shareWidgetAsImage(
+        _cardKey,
+        filename: 'wall-wrapped.png',
+        text: 'My Wall, wrapped 🧱 — see what people who know me say. '
+            'Claim your own wall: ${K.webBase}',
+      );
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
@@ -172,7 +169,7 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
           ).entrance(1),
           const SizedBox(height: 22),
           ElevatedButton.icon(
-            onPressed: _sharing ? null : () => _share(whatsApp: true),
+            onPressed: _sharing ? null : _share,
             icon: const Icon(Icons.ios_share_rounded, size: 19),
             label: Text(_sharing ? 'Preparing…' : 'Share my Wrapped'),
           ).entrance(2),
