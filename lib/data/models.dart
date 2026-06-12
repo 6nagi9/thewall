@@ -66,14 +66,16 @@ class AppUser {
     );
   }
 
-  Map<String, dynamic> toMap() => {
+  /// Client-writable consent fields only. Server-managed fields (premium,
+  /// giveToGetCount, unlockedWalls, …) are owned by Cloud Functions and are
+  /// rejected by firestore.rules if a client tries to set them — so they must
+  /// never appear here. Keep this in sync with the create/update allowlists in
+  /// firestore.rules (users/{uid}).
+  Map<String, dynamic> onboardingMap() => {
         'phoneHash': phoneHash,
         'displayName': displayName,
         'consentAt': consentAt == null ? null : Timestamp.fromDate(consentAt!),
         'ageConfirmed': ageConfirmed,
-        'premium': premium,
-        'giveToGetCount': giveToGetCount,
-        'unlockedWalls': unlockedWalls,
       };
 }
 

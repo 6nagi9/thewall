@@ -57,23 +57,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
+      // NOTE: verifyPhoneNumber's Future resolves once the request is *sent*,
+      // which is before codeSent fires. So the callbacks — not a finally block —
+      // own _sending: the spinner must stay up until the OTP screen is ready,
+      // otherwise the loader vanishes and the screen flickers into the next stage.
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: _e164,
         verificationCompleted: (cred) async {
           await FirebaseAuth.instance.signInWithCredential(cred);
+          // Router redirects on auth state change; keep the spinner until then.
         },
-        verificationFailed: (e) =>
-            setState(() => _error = e.message ?? 'Verification failed'),
+        verificationFailed: (e) {
+          if (!mounted) return;
+          setState(() {
+            _error = e.message ?? 'Verification failed';
+            _sending = false;
+          });
+        },
         codeSent: (id, _) {
-          setState(() => _verificationId = id);
+          if (!mounted) return;
+          setState(() {
+            _verificationId = id;
+            _sending = false;
+          });
           _startResendCountdown();
         },
         codeAutoRetrievalTimeout: (id) => _verificationId = id,
       );
     } catch (e) {
-      setState(() => _error = '$e');
-    } finally {
-      if (mounted) setState(() => _sending = false);
+      if (mounted) {
+        setState(() {
+          _error = '$e';
+          _sending = false;
+        });
+      }
     }
   }
 

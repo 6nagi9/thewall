@@ -140,7 +140,7 @@ class WallRepository {
     await _db
         .collection('users')
         .doc(user.uid)
-        .set(appUser.toMap(), SetOptions(merge: true));
+        .set(appUser.onboardingMap(), SetOptions(merge: true));
     try {
       await _fns
           .httpsCallable('onUserJoin')
