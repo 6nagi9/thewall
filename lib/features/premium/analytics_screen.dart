@@ -19,14 +19,15 @@ class AnalyticsScreen extends ConsumerWidget {
     final feedbackAsync = ref.watch(receivedFeedbackProvider);
     final user = ref.watch(appUserProvider).value;
 
-    if (user?.premium != true) {
+    if (user?.isPremium != true) {
       return Scaffold(
         appBar: AppBar(title: const Text('Trends')),
         body: const EmptyState(
           icon: Icons.lock_outline,
           title: 'Trends is a Premium feature',
           message:
-              'Upgrade to Premium to see how your reputation evolves over time.',
+              'Upgrade to Premium to see how your reputation evolves over time '
+              '— or earn free Premium days by inviting friends.',
         ),
       );
     }
@@ -52,6 +53,8 @@ class AnalyticsScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
+              const _AiSummaryCard().entrance(++i),
+              const SizedBox(height: 16),
               _SummaryCard(feedback: sorted).entrance(++i),
               const SizedBox(height: 20),
               ...FeedbackDimension.all.map((d) {
@@ -83,6 +86,113 @@ class AnalyticsScreen extends ConsumerWidget {
           return FlSpot(daysSince, f.dimensions[key]!.toDouble());
         })
         .toList();
+  }
+}
+
+// ─── AI summary (Premium anchor feature) ─────────────────────────────────────
+
+/// "What your wall says about you" — Claude-written narrative + growth plan,
+/// generated server-side from the user's own feedback.
+class _AiSummaryCard extends ConsumerStatefulWidget {
+  const _AiSummaryCard();
+  @override
+  ConsumerState<_AiSummaryCard> createState() => _AiSummaryCardState();
+}
+
+class _AiSummaryCardState extends ConsumerState<_AiSummaryCard> {
+  String? _summary;
+  String? _plan;
+  String? _error;
+  bool _loading = false;
+
+  Future<void> _generate({bool force = false}) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final res =
+          await ref.read(repoProvider).generateAiSummary(force: force);
+      if (!mounted) return;
+      setState(() {
+        _summary = res['summary'] as String?;
+        _plan = res['plan'] as String?;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e
+            .toString()
+            .replaceFirst(RegExp(r'^\[[^\]]*\]\s*'), ''));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WallCard(
+      padding: const EdgeInsets.all(20),
+      borderColor: AppTheme.gold.withValues(alpha: 0.3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded,
+                  color: AppTheme.goldSoft, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('What your wall says about you',
+                    style: AppTheme.display(size: 17)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_summary == null && !_loading && _error == null)
+            Text(
+              'An honest, kind synthesis of everything people have told you — '
+              'plus a growth plan. Generated privately from your own feedback.',
+              style: AppTheme.body(
+                  size: 13, color: AppTheme.ink300, height: 1.5),
+            ),
+          if (_error != null)
+            Text(_error!,
+                style: AppTheme.body(size: 13, color: AppTheme.rose)),
+          if (_summary != null) ...[
+            Text(_summary!,
+                style: AppTheme.body(
+                    size: 13.5, color: AppTheme.ink200, height: 1.6)),
+            if (_plan != null && _plan!.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text('YOUR GROWTH PLAN',
+                  style: AppTheme.body(
+                      size: 10.5,
+                      weight: FontWeight.w800,
+                      color: AppTheme.gold,
+                      letterSpacing: 1.4)),
+              const SizedBox(height: 6),
+              Text(_plan!,
+                  style: AppTheme.body(
+                      size: 13.5, color: AppTheme.ink200, height: 1.6)),
+            ],
+          ],
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: _loading ? null : () => _generate(force: _summary != null),
+            icon: _loading
+                ? const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.auto_awesome_outlined, size: 17),
+            label: Text(_loading
+                ? 'Reading your wall…'
+                : (_summary == null ? 'Generate my summary' : 'Regenerate')),
+          ),
+        ],
+      ),
+    );
   }
 }
 

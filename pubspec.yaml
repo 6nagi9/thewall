@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -56,6 +58,9 @@ dependencies:
   flutter_local_notifications: ^22.0.0
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.0
+  url_launcher: ^6.3.2
+  path_provider: ^2.1.5
+  firebase_remote_config: ^6.5.2
 
 dev_dependencies:
   flutter_test:
@@ -80,6 +85,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # gen-l10n scaffolding (English + Hindi) — see l10n.yaml + lib/l10n/*.arb.
+  # Strings migrate to AppLocalizations incrementally.
+  generate: true
 
   assets:
     - assets/icon/

@@ -27,3 +27,27 @@ class WalkthroughSeenNotifier extends Notifier<bool> {
     state = true;
   }
 }
+
+const String _kPendingDeepLink = 'pending_deep_link';
+
+/// A deep link (/i/…, /r/…, /c/…) that arrived before the user was signed in
+/// and onboarded. Persisted so the invite survives the install→OTP→consent
+/// journey; replayed by the router right after onboarding completes.
+final pendingDeepLinkProvider =
+    NotifierProvider<PendingDeepLinkNotifier, String?>(
+        PendingDeepLinkNotifier.new);
+
+class PendingDeepLinkNotifier extends Notifier<String?> {
+  @override
+  String? build() => ref.watch(sharedPrefsProvider).getString(_kPendingDeepLink);
+
+  Future<void> save(String path) async {
+    await ref.read(sharedPrefsProvider).setString(_kPendingDeepLink, path);
+    state = path;
+  }
+
+  Future<void> clear() async {
+    await ref.read(sharedPrefsProvider).remove(_kPendingDeepLink);
+    state = null;
+  }
+}

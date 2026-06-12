@@ -84,6 +84,33 @@ final myFeedbackRequestsProvider =
       .map((s) => s.docs.map(FeedbackRequest.fromDoc).toList());
 });
 
+/// The current user's circles (membership list lives on the user doc).
+final myCirclesProvider = StreamProvider<List<Circle>>((ref) {
+  final user = ref.watch(appUserProvider).value;
+  if (user == null || user.circleIds.isEmpty) return Stream.value(const []);
+  final ids = user.circleIds.take(10).toList();
+  return ref
+      .watch(firestoreProvider)
+      .collection('circles')
+      .where(FieldPath.documentId, whereIn: ids)
+      .snapshots()
+      .map((s) => s.docs.map(Circle.fromDoc).toList());
+});
+
+/// Members of one circle, ranked by feedback given.
+final circleMembersProvider =
+    StreamProvider.family<List<CircleMember>, String>((ref, circleId) {
+  return ref
+      .watch(firestoreProvider)
+      .collection('circles')
+      .doc(circleId)
+      .collection('members')
+      .orderBy('given', descending: true)
+      .limit(100)
+      .snapshots()
+      .map((s) => s.docs.map(CircleMember.fromDoc).toList());
+});
+
 /// Repository — all writes go through here; mutating ops call Cloud Functions.
 final repoProvider = Provider((ref) => WallRepository(ref));
 
@@ -130,6 +157,7 @@ class WallRepository {
       ok: data['ok'] == true,
       escrowed: data['escrowed'] == true,
       reason: data['reason'] as String?,
+      shareText: data['shareText'] as String?,
     );
   }
 
@@ -193,6 +221,63 @@ class WallRepository {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
+  /// Close a campaign (frees the free-tier slot).
+  Future<void> closeCampaign(String campaignId) => _fns
+      .httpsCallable('closeCampaign')
+      .call({'campaignId': campaignId}).then((_) {});
+
+  /// Load a campaign by id (deep-link respond flow). Campaign docs are
+  /// readable by any signed-in member per Firestore rules.
+  Future<FeedbackRequest?> getCampaign(String campaignId) async {
+    final doc =
+        await _db.collection('feedbackRequests').doc(campaignId).get();
+    return doc.exists ? FeedbackRequest.fromDoc(doc) : null;
+  }
+
+  // ---- Public web wall ----
+
+  /// Publish/unpublish the shareable web wall; returns the public link.
+  Future<String?> setWallPublish(bool publish) async {
+    final res =
+        await _fns.httpsCallable('setWallPublish').call({'publish': publish});
+    final data = Map<String, dynamic>.from(res.data as Map);
+    return data['link'] as String?;
+  }
+
+  // ---- Circles ----
+
+  Future<Map<String, dynamic>> createCircle(String name) async {
+    final res = await _fns.httpsCallable('createCircle').call({'name': name});
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<Map<String, dynamic>> joinCircle(String code) async {
+    final res = await _fns.httpsCallable('joinCircle').call({'code': code});
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<void> leaveCircle(String circleId) => _fns
+      .httpsCallable('leaveCircle')
+      .call({'circleId': circleId}).then((_) {});
+
+  // ---- AI summary (Premium) ----
+
+  Future<Map<String, dynamic>> generateAiSummary({bool force = false}) async {
+    final res =
+        await _fns.httpsCallable('generateAiSummary').call({'force': force});
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  // ---- Self-assessment (client-writable per rules) ----
+
+  Future<void> saveSelfScores(Map<String, int> scores) async {
+    final user = _auth.currentUser!;
+    await _db
+        .collection('users')
+        .doc(user.uid)
+        .set({'selfScores': scores}, SetOptions(merge: true));
+  }
+
   // ---- Gamification ----
 
   Future<void> setLeaderboardOptIn(bool optIn) =>
@@ -245,5 +330,14 @@ class SubmitResult {
   final bool ok;
   final bool escrowed;
   final String? reason;
-  SubmitResult({required this.ok, required this.escrowed, this.reason});
+
+  /// Server-built tease copy for the invite share sheet (escrow only).
+  final String? shareText;
+
+  SubmitResult({
+    required this.ok,
+    required this.escrowed,
+    this.reason,
+    this.shareText,
+  });
 }

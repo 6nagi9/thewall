@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants.dart';
+import '../../core/remote_config.dart';
+import '../../core/share_helpers.dart';
 import '../../core/theme.dart';
+import '../../data/models.dart';
 import '../../data/repositories.dart';
 import '../../shared/wall_ui.dart';
+import '../premium/premium_screen.dart';
 
-/// B1 — Feedback campaigns: the owner solicits targeted feedback from
-/// specific people. Fully consent-forward and DPDP-ideal (owner initiates).
+/// B1 — Feedback campaigns: the owner solicits feedback via a shareable link.
+///
+/// FREE for everyone (one active campaign; unlimited with Premium) — the
+/// ask-link is the app's strongest viral loop and must never sit behind the
+/// paywall. Premium monetizes the insight on the results instead.
 class RequestFeedbackScreen extends ConsumerStatefulWidget {
   const RequestFeedbackScreen({super.key});
   @override
@@ -43,20 +49,100 @@ class _RequestFeedbackScreenState
             focusDimensions: _dims.toList(),
           );
       if (!mounted) return;
-      final link = result['link'] as String? ?? 'https://thewall.app';
-      final msg = _msgCtrl.text.trim().isEmpty
-          ? "I'd love your honest feedback. Join me on The Wall: $link"
-          : '${_msgCtrl.text.trim()}\n\nJoin here: $link';
-      await SharePlus.instance.share(ShareParams(
-        text: msg,
-        subject: 'Feedback request — The Wall',
-      ));
+      final link = result['link'] as String? ?? K.webBase;
+      await _shareSheet(link);
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) _snack('$e');
+      if (!mounted) return;
+      final msg = '$e';
+      if (msg.contains('resource-exhausted') ||
+          msg.contains('one active campaign')) {
+        _upsell();
+      } else {
+        _snack(msg);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _shareSheet(String link, {String? customMessage}) async {
+    final template = ref
+        .read(remoteConfigProvider)
+        .getString(RemoteConfigKeys.campaignTemplate);
+    final base = renderTemplate(template, link: link);
+    final msg = (customMessage ?? _msgCtrl.text.trim()).isEmpty
+        ? base
+        : '${customMessage ?? _msgCtrl.text.trim()}\n\n$base';
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.ink900,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Your link is live', style: AppTheme.display(size: 20)),
+              const SizedBox(height: 8),
+              Text(
+                'Anyone who opens it can give you structured feedback — '
+                'anonymously if they choose.',
+                style: AppTheme.body(
+                    size: 13.5, color: AppTheme.ink300, height: 1.5),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(sheetCtx);
+                  await shareViaWhatsApp(msg);
+                },
+                icon: const Icon(Icons.chat_rounded, size: 19),
+                label: const Text('Share on WhatsApp'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(sheetCtx);
+                  await shareText(msg, subject: 'Feedback request — The Wall');
+                },
+                icon: const Icon(Icons.ios_share_rounded, size: 19),
+                label: const Text('More options'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _upsell() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('One campaign at a time'),
+        content: const Text(
+            'Free includes one active campaign. Close your current one below, '
+            'or go Premium for unlimited campaigns.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const PremiumScreen()));
+            },
+            child: const Text('Go Premium'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _snack(String msg) =>
@@ -64,9 +150,12 @@ class _RequestFeedbackScreenState
 
   @override
   Widget build(BuildContext context) {
+    final campaigns = ref.watch(myFeedbackRequestsProvider).value ?? const [];
+    final active =
+        campaigns.where((c) => c.status == 'active').toList();
     var i = 0;
     return Scaffold(
-      appBar: AppBar(title: const Text('Request feedback')),
+      appBar: AppBar(title: const Text('Ask for feedback')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
@@ -80,13 +169,29 @@ class _RequestFeedbackScreenState
                 const SizedBox(height: 8),
                 Text(
                   'Choose focus areas, write an optional note, and share the '
-                  'link with people you trust. Only members of The Wall can respond.',
+                  'link anywhere — WhatsApp status, group chats, your bio.',
                   style: AppTheme.body(
                       size: 13, color: AppTheme.ink300, height: 1.5),
                 ),
               ],
             ),
           ).entrance(++i),
+          if (active.isNotEmpty) ...[
+            const SizedBox(height: 22),
+            SectionLabel('Your active campaigns').entrance(++i),
+            ...active.map((c) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _CampaignCard(
+                    campaign: c,
+                    onShare: () =>
+                        _shareSheet('${K.webBase}/r/${c.id}',
+                            customMessage: c.message),
+                    onClose: () async {
+                      await ref.read(repoProvider).closeCampaign(c.id);
+                    },
+                  ).entrance(++i),
+                )),
+          ],
           const SizedBox(height: 22),
           SectionLabel('Focus areas').entrance(++i),
           Wrap(
@@ -128,6 +233,71 @@ class _RequestFeedbackScreenState
                 : const Icon(Icons.send_outlined, size: 19),
             label: const Text('Generate & share link'),
           ).entrance(++i),
+        ],
+      ),
+    );
+  }
+}
+
+class _CampaignCard extends StatelessWidget {
+  final FeedbackRequest campaign;
+  final VoidCallback onShare;
+  final VoidCallback onClose;
+  const _CampaignCard({
+    required this.campaign,
+    required this.onShare,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return WallCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.campaign_outlined,
+                  color: AppTheme.clay, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  campaign.message ?? 'Open feedback request',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.body(
+                      size: 13.5,
+                      weight: FontWeight.w600,
+                      color: AppTheme.paper),
+                ),
+              ),
+              Text(
+                '${campaign.responseCount} ${campaign.responseCount == 1 ? "reply" : "replies"}',
+                style: AppTheme.body(
+                    size: 12.5,
+                    weight: FontWeight.w700,
+                    color: AppTheme.sage),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: onShare,
+                icon: const Icon(Icons.ios_share_rounded, size: 16),
+                label: const Text('Share again'),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: onClose,
+                child: Text('Close',
+                    style: AppTheme.body(
+                        size: 13, color: AppTheme.rose)),
+              ),
+            ],
+          ),
         ],
       ),
     );

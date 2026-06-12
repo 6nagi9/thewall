@@ -25,6 +25,22 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Route Flutter deep links through go_router (/i, /r, /c, /w). -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="true" />
+            <!-- App Links: verified against /.well-known/assetlinks.json on the
+                 hosting domain (add the release SHA-256 there before launch). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"
+                      android:host="the-wall-app-260609.web.app"/>
+                <data android:pathPrefix="/i/"/>
+                <data android:pathPrefix="/r/"/>
+                <data android:pathPrefix="/c/"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

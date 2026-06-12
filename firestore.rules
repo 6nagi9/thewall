@@ -17,7 +17,8 @@ service cloud.firestore {
              ['phoneHash','displayName','consentAt','ageConfirmed']);
       allow update: if isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-             ['phoneHash','displayName','consentAt','ageConfirmed','fcmToken']);
+             ['phoneHash','displayName','consentAt','ageConfirmed','fcmToken',
+              'selfScores']);
       allow delete: if false; // erasure happens via Cloud Function only
 
       // Inbox (received feedback) is readable by the owner; written by Functions.
@@ -70,5 +71,30 @@ service cloud.firestore {
 
     // Payment ledger: Functions only.
     match /ledger/{id} { allow read, write: if false; }
+
+    // Circles: visible only to members (membership checked via the member
+    // doc). All writes go through Cloud Functions (create/join/leave).
+    match /circles/{circleId} {
+      function isMember() {
+        return isSignedIn()
+          && exists(/databases/$(database)/documents/circles/$(circleId)/members/$(request.auth.uid));
+      }
+      allow read: if isMember();
+      allow write: if false;
+
+      match /members/{memberUid} {
+        allow read: if isMember();
+        allow write: if false;
+      }
+    }
+
+    // Public walls: owner-published, random-slug pages. Single-doc reads are
+    // public (the slug is the capability); listing is denied so members can't
+    // be enumerated. Written only by Functions.
+    match /publicWalls/{slug} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if false;
+    }
   }
 }

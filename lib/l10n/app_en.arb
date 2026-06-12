@@ -1,0 +1,19 @@
+{
+  "@@locale": "en",
+  "appTitle": "The Wall",
+  "tabMyWall": "My Wall",
+  "tabGive": "Give",
+  "tabDiscover": "Discover",
+  "tabSettings": "Settings",
+  "giveFeedbackTitle": "Give feedback",
+  "layABrick": "Lay a brick",
+  "layThisBrick": "Lay this brick",
+  "askForFeedback": "Ask for feedback",
+  "shareOnWhatsApp": "Share on WhatsApp",
+  "moreOptions": "More options",
+  "yourWall": "Your wall",
+  "feedbackFriday": "Feedback Friday — double contribution points on every brick today!",
+  "unlockHint": "Give one piece of feedback to unlock this brick.",
+  "growthNotesPrivate": "Growth notes stay private to them — they never appear on a public wall.",
+  "claimYourWall": "Claim your own wall"
+}

@@ -10,8 +10,10 @@ import '../../data/models.dart';
 import '../../data/repositories.dart';
 import '../../shared/wall_ui.dart';
 import '../gamification/badges_screen.dart';
+import '../gamification/wrapped_screen.dart';
 import '../feedback/request_feedback_screen.dart';
 import '../premium/premium_screen.dart';
+import '../self_assessment/self_assessment_screen.dart';
 
 class MyWallScreen extends ConsumerWidget {
   const MyWallScreen({super.key});
@@ -33,7 +35,16 @@ class MyWallScreen extends ConsumerWidget {
           ),
           data: (feedback) {
             final gateCleared = user?.gateCleared ?? false;
-            final isPremium = user?.premium ?? false;
+            final isPremium = user?.isPremium ?? false;
+            final given = user?.giveToGetCount ?? 0;
+
+            // Progressive reveal: 1 give = 1 unlock, oldest first. The full
+            // gate (aggregates + other walls) still opens at the threshold.
+            final byOldest = [...feedback]
+              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+            final unlockedIds =
+                byOldest.take(given).map((f) => f.id).toSet();
+
             var i = 0;
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
@@ -44,89 +55,142 @@ class MyWallScreen extends ConsumerWidget {
                   opennessLabel: wall?.opennessLabel ?? 'New',
                 ),
                 const SizedBox(height: 20),
-                if (!gateCleared)
-                  _SoftGateCard(
-                    count: feedback.length,
-                    given: user?.giveToGetCount ?? 0,
+                if (!gateCleared) ...[
+                  _GateProgressCard(
+                    lockedCount:
+                        feedback.length - unlockedIds.length,
+                    given: given,
                     onAccessData: () =>
                         ref.read(repoProvider).requestDataAccess(),
-                  ).entrance(++i)
-                else ...[
-                  if (wall != null && wall.meetsMinN) ...[
-                    _DimensionSummary(wall: wall).entrance(++i),
-                    const SizedBox(height: 14),
-                  ],
-                  if (isPremium && wall != null && wall.meetsMinN) ...[
-                    _CoachingCard(wall: wall).entrance(++i),
-                    const SizedBox(height: 14),
-                    _CohortCard(wall: wall).entrance(++i),
-                    const SizedBox(height: 14),
-                  ],
-                  if (!isPremium) ...[
-                    _PremiumBanner(
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const PremiumScreen())),
-                    ).entrance(++i),
-                    const SizedBox(height: 14),
-                  ],
-                  _BadgesMiniSection(
-                    badges: gam?.badges ?? [],
-                    onViewAll: () => Navigator.push(
+                  ).entrance(++i),
+                  const SizedBox(height: 14),
+                ],
+                if (gateCleared && wall != null && wall.meetsMinN) ...[
+                  _DimensionSummary(wall: wall).entrance(++i),
+                  const SizedBox(height: 14),
+                ],
+                if (user != null && wall != null && wall.meetsMinN) ...[
+                  _GapCard(user: user, wall: wall).entrance(++i),
+                  const SizedBox(height: 14),
+                ] else if (user != null && user.selfScores.isEmpty) ...[
+                  _SelfAssessCta(
+                    onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const BadgesScreen())),
+                            builder: (_) =>
+                                const SelfAssessmentScreen())),
                   ).entrance(++i),
-                  if (isPremium) ...[
-                    const SizedBox(height: 14),
-                    WallCard(
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const RequestFeedbackScreen())),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.campaign_outlined,
-                              color: AppTheme.clay),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text('Request targeted feedback',
+                  const SizedBox(height: 14),
+                ],
+                if (isPremium && gateCleared && wall != null && wall.meetsMinN) ...[
+                  _CoachingCard(wall: wall).entrance(++i),
+                  const SizedBox(height: 14),
+                  _CohortCard(wall: wall).entrance(++i),
+                  const SizedBox(height: 14),
+                ],
+                if (!isPremium) ...[
+                  _PremiumBanner(
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const PremiumScreen())),
+                  ).entrance(++i),
+                  const SizedBox(height: 14),
+                ],
+                _BadgesMiniSection(
+                  badges: gam?.badges ?? [],
+                  onViewAll: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const BadgesScreen())),
+                ).entrance(++i),
+                const SizedBox(height: 14),
+                // Campaigns are FREE — the ask-link is the core loop.
+                WallCard(
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const RequestFeedbackScreen())),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.campaign_outlined,
+                          color: AppTheme.clay),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Ask for feedback',
                                 style: AppTheme.body(
                                     size: 15,
                                     weight: FontWeight.w600,
                                     color: AppTheme.paper)),
-                          ),
-                          const Icon(Icons.arrow_forward_rounded,
-                              color: AppTheme.ink400, size: 20),
-                        ],
+                            Text(
+                                'Share a link — anyone on The Wall can answer.',
+                                style: AppTheme.body(
+                                    size: 12, color: AppTheme.ink400)),
+                          ],
+                        ),
                       ),
-                    ).entrance(++i),
-                  ],
-                  const SizedBox(height: 26),
-                  SectionLabel('Bricks on your wall · ${feedback.length}')
-                      .entrance(++i),
-                  if (feedback.isEmpty)
-                    const EmptyState(
-                      icon: Icons.grid_view_rounded,
-                      title: 'No bricks yet',
-                      message:
-                          'Every piece of feedback is a brick on your wall. '
-                          'Invite people you trust to lay the first one.',
-                    ).entrance(++i)
-                  else
-                    ...feedback.map((f) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _FeedbackCard(
-                            f: f,
-                            onToggle: (v) => ref
-                                .read(repoProvider)
-                                .setDisclosure(f.id, v),
-                            onDispute: () => _dispute(context, ref, f.id),
-                          ).entrance(++i),
-                        )),
+                      const Icon(Icons.arrow_forward_rounded,
+                          color: AppTheme.ink400, size: 20),
+                    ],
+                  ),
+                ).entrance(++i),
+                if (feedback.length >= K.minReviewsForAggregate) ...[
+                  const SizedBox(height: 14),
+                  WallCard(
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const WrappedScreen())),
+                    borderColor: AppTheme.gold.withValues(alpha: 0.3),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.auto_awesome_rounded,
+                            color: AppTheme.goldSoft),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text('Your Wall, wrapped — share it',
+                              style: AppTheme.body(
+                                  size: 15,
+                                  weight: FontWeight.w600,
+                                  color: AppTheme.paper)),
+                        ),
+                        const Icon(Icons.arrow_forward_rounded,
+                            color: AppTheme.ink400, size: 20),
+                      ],
+                    ),
+                  ).entrance(++i),
                 ],
+                const SizedBox(height: 26),
+                SectionLabel('Bricks on your wall · ${feedback.length}')
+                    .entrance(++i),
+                if (feedback.isEmpty)
+                  const EmptyState(
+                    icon: Icons.grid_view_rounded,
+                    title: 'No bricks yet',
+                    message:
+                        'Every piece of feedback is a brick on your wall. '
+                        'Invite people you trust to lay the first one.',
+                  ).entrance(++i)
+                else
+                  ...feedback.map((f) {
+                    final locked =
+                        !gateCleared && !unlockedIds.contains(f.id);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _FeedbackCard(
+                        f: f,
+                        locked: locked,
+                        onToggle: (v) => ref
+                            .read(repoProvider)
+                            .setDisclosure(f.id, v),
+                        onDispute: () => _dispute(context, ref, f.id),
+                      ).entrance(++i),
+                    );
+                  }),
               ],
             );
           },
@@ -224,14 +288,14 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ─── Soft gate ───────────────────────────────────────────────────────────────
+// ─── Gate progress (progressive reveal) ──────────────────────────────────────
 
-class _SoftGateCard extends StatelessWidget {
-  final int count;
+class _GateProgressCard extends StatelessWidget {
+  final int lockedCount;
   final int given;
   final VoidCallback onAccessData;
-  const _SoftGateCard({
-    required this.count,
+  const _GateProgressCard({
+    required this.lockedCount,
     required this.given,
     required this.onAccessData,
   });
@@ -258,43 +322,22 @@ class _SoftGateCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child:
-                    const Icon(Icons.lock_outline, color: AppTheme.clay),
+                    const Icon(Icons.lock_open_outlined, color: AppTheme.clay),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  count == 0
-                      ? 'Your wall is sealed'
-                      : '$count ${count == 1 ? "person has" : "people have"} written about you',
+                  lockedCount == 0
+                      ? 'Every brick unlocked'
+                      : '$lockedCount ${lockedCount == 1 ? "brick is" : "bricks are"} still sealed',
                   style: AppTheme.display(size: 20),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          // Blurred tease of what's behind the gate.
-          ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
-            child: Row(
-              children: List.generate(
-                5,
-                (i) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: i < 3 ? AppTheme.gold : AppTheme.ink700,
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Text(
-            'LAY YOUR FIRST BRICKS',
+            'EACH BRICK YOU LAY UNLOCKS ONE OF YOURS',
             style: AppTheme.body(
               size: 11,
               weight: FontWeight.w700,
@@ -303,12 +346,14 @@ class _SoftGateCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          BrickProgress(filled: given, total: K.giveToGetThreshold),
+          BrickProgress(
+              filled: given.clamp(0, K.giveToGetThreshold),
+              total: K.giveToGetThreshold),
           const SizedBox(height: 12),
           Text(
             remaining == 0
-                ? 'Unlocking your wall…'
-                : 'Give feedback to $remaining more ${remaining == 1 ? "person" : "people"} to open your wall. Honest in, honest out.',
+                ? 'Full wall open — averages and other walls unlocked.'
+                : 'Give feedback to $remaining more ${remaining == 1 ? "person" : "people"} to open your averages and browse walls. Honest in, honest out.',
             style: AppTheme.body(
                 size: 13.5, color: AppTheme.ink300, height: 1.5),
           ),
@@ -332,6 +377,10 @@ class _DimensionSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final entries = wall.dimensionAverages.entries
+        .where((e) => e.value > 0)
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     return WallCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -339,8 +388,8 @@ class _DimensionSummary extends StatelessWidget {
         children: [
           Text('How people see you', style: AppTheme.display(size: 18)),
           const SizedBox(height: 16),
-          ...FeedbackDimension.all.map((d) {
-            final v = wall.dimensionAverages[d.key] ?? 0;
+          ...entries.map((e) {
+            final d = FeedbackDimension.byKey(e.key);
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 7),
               child: Row(
@@ -354,9 +403,9 @@ class _DimensionSummary extends StatelessWidget {
                             color: AppTheme.ink200)),
                   ),
                   Expanded(
-                      child: WallProgress(value: v / 5)),
+                      child: WallProgress(value: e.value / 5)),
                   const SizedBox(width: 10),
-                  ScorePill(v),
+                  ScorePill(e.value),
                 ],
               ),
             );
@@ -365,6 +414,143 @@ class _DimensionSummary extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─── You vs how others see you (free — the Johari hook) ─────────────────────
+
+class _GapCard extends StatelessWidget {
+  final AppUser user;
+  final Wall wall;
+  const _GapCard({required this.user, required this.wall});
+
+  @override
+  Widget build(BuildContext context) {
+    final shared = wall.dimensionAverages.entries
+        .where((e) => user.selfScores.containsKey(e.key) && e.value > 0)
+        .toList();
+    if (shared.isEmpty) return const SizedBox.shrink();
+    return WallCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.compare_arrows_rounded,
+                  color: AppTheme.sage, size: 20),
+              const SizedBox(width: 8),
+              Text('You vs how others see you',
+                  style: AppTheme.display(size: 17)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...shared.map((e) {
+            final d = FeedbackDimension.byKey(e.key);
+            final self = (user.selfScores[e.key] ?? 0).toDouble();
+            final others = e.value;
+            final delta = others - self;
+            final deltaLabel = delta.abs() < 0.3
+                ? 'aligned'
+                : delta > 0
+                    ? '+${delta.toStringAsFixed(1)} kinder than you think'
+                    : '${delta.toStringAsFixed(1)} vs your view';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(d.label,
+                          style: AppTheme.body(
+                              size: 13,
+                              weight: FontWeight.w600,
+                              color: AppTheme.ink200)),
+                      const Spacer(),
+                      Text(deltaLabel,
+                          style: AppTheme.body(
+                              size: 11.5,
+                              color: delta.abs() < 0.3
+                                  ? AppTheme.ink400
+                                  : (delta > 0
+                                      ? AppTheme.sage
+                                      : AppTheme.gold))),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  WallProgress(value: self / 5, color: AppTheme.ink600),
+                  const SizedBox(height: 4),
+                  WallProgress(value: others / 5),
+                ],
+              ),
+            );
+          }),
+          Row(
+            children: [
+              _LegendDot(color: AppTheme.ink600, label: 'You'),
+              const SizedBox(width: 14),
+              _LegendDot(color: AppTheme.clay, label: 'Others'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+                color: color, borderRadius: BorderRadius.circular(3)),
+          ),
+          const SizedBox(width: 6),
+          Text(label,
+              style: AppTheme.body(size: 11.5, color: AppTheme.ink400)),
+        ],
+      );
+}
+
+class _SelfAssessCta extends StatelessWidget {
+  final VoidCallback onTap;
+  const _SelfAssessCta({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => WallCard(
+        onTap: onTap,
+        child: Row(
+          children: [
+            const Icon(Icons.psychology_outlined, color: AppTheme.sage),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Rate yourself (2 min)',
+                      style: AppTheme.body(
+                          size: 15,
+                          weight: FontWeight.w600,
+                          color: AppTheme.paper)),
+                  Text(
+                      'Then see how your self-image compares with what others say.',
+                      style: AppTheme.body(
+                          size: 12, color: AppTheme.ink400)),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_rounded,
+                color: AppTheme.ink400, size: 20),
+          ],
+        ),
+      );
 }
 
 // ─── Coaching prompts (Premium) ───────────────────────────────────────────────
@@ -378,6 +564,13 @@ const _kCoachingTips = <String, String>{
       'Summarise key points at the end of important conversations to close the loop.',
   'reliability':
       'Use a simple task manager to track every commitment, no matter how small.',
+  'listening':
+      'In your next three conversations, ask one follow-up question before sharing your view.',
+  'shows_up':
+      'Reply to plans within a day — even a "can\'t make it" builds trust.',
+  'patience':
+      'When you feel the urge to jump in, count three breaths first.',
+  'fun': 'Suggest the next plan yourself — people remember initiators.',
 };
 
 class _CoachingCard extends StatelessWidget {
@@ -387,7 +580,7 @@ class _CoachingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tips = wall.dimensionAverages.entries
-        .where((e) => e.value < 3.5)
+        .where((e) => e.value > 0 && e.value < 3.5)
         .map((e) => _kCoachingTips[e.key])
         .whereType<String>()
         .toList();
@@ -476,9 +669,10 @@ class _CohortCard extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: FeedbackDimension.all.map((d) {
-              final v = wall.dimensionAverages[d.key] ?? 0;
+            children: wall.dimensionAverages.entries.map((e) {
+              final v = e.value;
               if (v == 0) return const SizedBox.shrink();
+              final d = FeedbackDimension.byKey(e.key);
               final c = _color(v);
               return Container(
                 padding: const EdgeInsets.symmetric(
@@ -574,7 +768,7 @@ class _PremiumBanner extends StatelessWidget {
                         weight: FontWeight.w700,
                         color: AppTheme.paper)),
                 const SizedBox(height: 2),
-                Text('Coaching, peer comparison, trends & more.',
+                Text('AI summary, coaching, peer comparison, trends.',
                     style: AppTheme.body(
                         size: 12.5, color: AppTheme.ink400)),
               ],
@@ -687,14 +881,16 @@ class _BadgesMiniSection extends StatelessWidget {
   }
 }
 
-// ─── Feedback card ────────────────────────────────────────────────────────────
+// ─── Feedback card (with locked tease state) ─────────────────────────────────
 
 class _FeedbackCard extends StatelessWidget {
   final ReceivedFeedback f;
+  final bool locked;
   final ValueChanged<bool> onToggle;
   final VoidCallback onDispute;
   const _FeedbackCard({
     required this.f,
+    this.locked = false,
     required this.onToggle,
     required this.onDispute,
   });
@@ -706,6 +902,72 @@ class _FeedbackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final underReview = f.status == 'under_review';
+
+    if (locked) {
+      // Blurred tease with real metadata — the motivator to give one more.
+      return WallCard(
+        padding: const EdgeInsets.all(18),
+        borderColor: AppTheme.gold.withValues(alpha: 0.25),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppTheme.gold.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.lock_outline,
+                  color: AppTheme.goldSoft, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${f.contextTag ?? "Someone"} · ${f.tags.length} tag${f.tags.length == 1 ? "" : "s"}${f.comment != null ? " · a note" : ""}',
+                    style: AppTheme.body(
+                        size: 13.5,
+                        weight: FontWeight.w600,
+                        color: AppTheme.paper),
+                  ),
+                  const SizedBox(height: 8),
+                  ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                    child: Row(
+                      children: List.generate(
+                        5,
+                        (i) => Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: i < _avg.round()
+                                  ? AppTheme.gold
+                                  : AppTheme.ink700,
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Give one piece of feedback to unlock this brick.',
+                    style: AppTheme.body(
+                        size: 11.5, color: AppTheme.ink400),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return WallCard(
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -769,9 +1031,7 @@ class _FeedbackCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: f.dimensions.entries.map((e) {
-              final dim = FeedbackDimension.all.firstWhere(
-                  (d) => d.key == e.key,
-                  orElse: () => FeedbackDimension(e.key, e.key, '', ''));
+              final dim = FeedbackDimension.byKey(e.key);
               return Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 5),
@@ -806,6 +1066,34 @@ class _FeedbackCard extends StatelessWidget {
                                 size: 11.5, color: AppTheme.clay)),
                       ))
                   .toList(),
+            ),
+          ],
+          if (f.growthTags.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: f.growthTags
+                  .map((t) => Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppTheme.rose.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(100),
+                          border: Border.all(
+                              color:
+                                  AppTheme.rose.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(t,
+                            style: AppTheme.body(
+                                size: 11.5, color: AppTheme.rose)),
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Growth notes are private to you.',
+              style: AppTheme.body(size: 10.5, color: AppTheme.ink400),
             ),
           ],
           if (f.comment != null && f.comment!.isNotEmpty) ...[

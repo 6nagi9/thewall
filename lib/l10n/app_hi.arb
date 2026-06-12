@@ -1,0 +1,19 @@
+{
+  "@@locale": "hi",
+  "appTitle": "द वॉल",
+  "tabMyWall": "मेरी दीवार",
+  "tabGive": "दें",
+  "tabDiscover": "खोजें",
+  "tabSettings": "सेटिंग्स",
+  "giveFeedbackTitle": "फ़ीडबैक दें",
+  "layABrick": "एक ईंट रखें",
+  "layThisBrick": "यह ईंट रखें",
+  "askForFeedback": "फ़ीडबैक माँगें",
+  "shareOnWhatsApp": "WhatsApp पर शेयर करें",
+  "moreOptions": "और विकल्प",
+  "yourWall": "आपकी दीवार",
+  "feedbackFriday": "फ़ीडबैक फ़्राइडे — आज हर ईंट पर दोगुने पॉइंट!",
+  "unlockHint": "इस ईंट को खोलने के लिए एक फ़ीडबैक दें।",
+  "growthNotesPrivate": "ग्रोथ नोट्स सिर्फ़ उन्हीं को दिखते हैं — कभी सार्वजनिक नहीं होते।",
+  "claimYourWall": "अपनी दीवार claim करें"
+}

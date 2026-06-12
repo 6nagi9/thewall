@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Someone left you feedback — The Wall</title>
+  <meta property="og:title" content="Someone left you feedback 👀">
+  <meta property="og:description" content="It's waiting in escrow on The Wall. Join with your number to unlock it — consent-first, private by design.">
+  <meta property="og:image" content="/assets/icon.png">
+  <meta name="twitter:card" content="summary">
+  <style>
+    :root { --ink:#13100D; --card:#201B16; --line:#38302A; --clay:#E07A5F;
+            --paper:#FAF5EC; --muted:#B5A99B; --gold:#D9A441; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; display:flex; align-items:center;
+           justify-content:center; background:var(--ink); color:var(--paper);
+           font-family: Georgia, 'Times New Roman', serif; }
+    main { max-width:460px; padding:40px 28px; text-align:center; }
+    .bricks { display:grid; grid-template-columns:repeat(2,34px); gap:6px;
+              justify-content:center; margin-bottom:26px; }
+    .bricks div { width:34px; height:34px; border-radius:9px; background:var(--clay); }
+    .bricks div:nth-child(2){ filter:brightness(1.15);} .bricks div:nth-child(3){ filter:brightness(.8);}
+    h1 { font-size:1.9rem; margin:.2em 0; }
+    p  { color:var(--muted); line-height:1.55; }
+    .tease { background:var(--card); border:1px solid var(--line); border-radius:18px;
+             padding:18px; margin:22px 0; filter:none; }
+    .blur { display:flex; gap:8px; justify-content:center; filter:blur(7px); }
+    .blur span { width:30px; height:30px; border-radius:8px; background:var(--gold);
+                 display:inline-block; }
+    .blur span:nth-child(4), .blur span:nth-child(5){ background:var(--line); }
+    .cta { display:inline-block; margin-top:8px; background:var(--clay); color:var(--ink);
+           padding:14px 26px; border-radius:14px; text-decoration:none; font-weight:bold;
+           font-size:1.05rem; }
+    small { display:block; margin-top:22px; color:var(--muted); opacity:.8; }
+    a.plain { color:var(--muted); }
+  </style>
+</head>
+<body>
+<main>
+  <div class="bricks"><div></div><div></div><div></div><div></div></div>
+  <h1>Someone left you feedback</h1>
+  <p>It's sealed in escrow and unlocks only for you — the moment you join
+     The Wall with your own number and consent. Nobody else can ever see it.</p>
+  <div class="tease">
+    <div class="blur"><span></span><span></span><span></span><span></span><span></span></div>
+  </div>
+  <a class="cta" id="open" href="/">Unlock my feedback</a>
+  <small>
+    No app store listing yet? <a class="plain" href="/">Learn about The Wall</a> ·
+    Consent-first · DPDP-compliant · Data stays in India
+  </small>
+</main>
+<script>
+  // If the app is installed, App Links / Universal Links intercept this URL
+  // before the page even loads. This page is the not-installed fallback:
+  // keep the path so "Open in app" after install can resume.
+  // TODO(go-live): point the CTA at the App Store / Play Store listing.
+  document.getElementById('open').addEventListener('click', function () {
+    try { localStorage.setItem('wall_pending_link', location.pathname); } catch (e) {}
+  });
+</script>
+</body>
+</html>

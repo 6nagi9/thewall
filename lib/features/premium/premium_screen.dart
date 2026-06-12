@@ -94,7 +94,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(appUserProvider).value;
-    if (user?.premium == true) {
+    if (user?.isPremium == true) {
       return Scaffold(
         appBar: AppBar(title: const Text('Premium')),
         body: const Center(child: _ActiveBanner()),
@@ -147,7 +147,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen> {
                           style: AppTheme.display(size: 26)),
                       const SizedBox(height: 6),
                       Text(
-                        'Trends, peer comparison, coaching and campaigns — everything to turn feedback into growth.',
+                        'AI summary, trends, peer comparison and coaching — everything to turn feedback into growth.',
                         style: AppTheme.body(
                             size: 14,
                             color: AppTheme.ink300,
@@ -284,15 +284,19 @@ class _ActiveBanner extends StatelessWidget {
       );
 }
 
+// Campaigns are deliberately NOT premium — the ask-link is the viral loop.
+// Premium sells the insight on the results.
 const _kFeatures = [
+  (Icons.auto_awesome_rounded, 'AI wall summary',
+      'What people consistently say about you — written for you, with a growth plan.'),
   (Icons.show_chart_outlined, 'Trend charts',
       'See how your scores change over time.'),
   (Icons.people_outline, 'Cohort comparison',
       'Find out where you stand vs. the wider Wall community.'),
   (Icons.lightbulb_outline, 'Coaching prompts',
       'Personalised growth tips based on your lowest-scoring dimensions.'),
-  (Icons.campaign_outlined, 'Feedback campaigns',
-      'Solicit targeted feedback from people you trust.'),
+  (Icons.all_inclusive_rounded, 'Unlimited campaigns',
+      'Run as many feedback requests at once as you like (free includes one).'),
   (Icons.workspace_premium_outlined, 'Premium badge',
       'A visible signal of your commitment to growth.'),
 ];

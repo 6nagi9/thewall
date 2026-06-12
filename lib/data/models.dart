@@ -8,8 +8,13 @@ class AppUser {
   final DateTime? consentAt;
   final bool ageConfirmed;
   final bool premium;
+  final DateTime? premiumUntil; // referral-granted premium window
   final int giveToGetCount;
+  final int inviteJoins; // people who joined from this user's invites
   final List<String> unlockedWalls;
+  final List<String> circleIds;
+  final String? publicSlug; // set when the public web wall is published
+  final Map<String, int> selfScores; // self-assessment, dimension key -> 1..5
   final DateTime? dataAccessGrantedAt;
 
   AppUser({
@@ -19,13 +24,24 @@ class AppUser {
     this.consentAt,
     this.ageConfirmed = false,
     this.premium = false,
+    this.premiumUntil,
     this.giveToGetCount = 0,
+    this.inviteJoins = 0,
     this.unlockedWalls = const [],
+    this.circleIds = const [],
+    this.publicSlug,
+    this.selfScores = const {},
     this.dataAccessGrantedAt,
   });
 
+  /// Full gate (aggregates + viewing other walls). Individual received items
+  /// unlock progressively: 1 give = 1 unlock.
   bool get gateCleared => giveToGetCount >= 5;
   bool get onboarded => consentAt != null && ageConfirmed;
+
+  /// Effective premium: lifetime purchase OR an active referral window.
+  bool get isPremium =>
+      premium || (premiumUntil != null && premiumUntil!.isAfter(DateTime.now()));
 
   factory AppUser.fromDoc(DocumentSnapshot doc) {
     final d = (doc.data() as Map<String, dynamic>?) ?? {};
@@ -36,8 +52,16 @@ class AppUser {
       consentAt: (d['consentAt'] as Timestamp?)?.toDate(),
       ageConfirmed: d['ageConfirmed'] ?? false,
       premium: d['premium'] ?? false,
+      premiumUntil: (d['premiumUntil'] as Timestamp?)?.toDate(),
       giveToGetCount: d['giveToGetCount'] ?? 0,
+      inviteJoins: (d['inviteJoins'] as num?)?.toInt() ?? 0,
       unlockedWalls: List<String>.from(d['unlockedWalls'] ?? const []),
+      circleIds: List<String>.from(d['circleIds'] ?? const []),
+      publicSlug: d['publicSlug'],
+      selfScores: (d['selfScores'] as Map?)?.map(
+            (k, v) => MapEntry(k as String, (v as num).toInt()),
+          ) ??
+          const {},
       dataAccessGrantedAt: (d['dataAccessGrantedAt'] as Timestamp?)?.toDate(),
     );
   }
@@ -115,6 +139,7 @@ class ReceivedFeedback {
   final String id;
   final Map<String, int> dimensions;
   final List<String> tags;
+  final List<String> growthTags;
   final String? comment;
   final String? authorName;
   final String? contextTag;
@@ -126,6 +151,7 @@ class ReceivedFeedback {
     required this.id,
     required this.dimensions,
     required this.tags,
+    this.growthTags = const [],
     this.comment,
     this.authorName,
     this.contextTag,
@@ -143,6 +169,7 @@ class ReceivedFeedback {
           ) ??
           {},
       tags: List<String>.from(d['tags'] ?? const []),
+      growthTags: List<String>.from(d['growthTags'] ?? const []),
       comment: d['comment'],
       authorName: d['authorName'],
       contextTag: d['contextTag'],
@@ -158,26 +185,32 @@ class FeedbackDraft {
   final String targetPhoneHash;
   final Map<String, int> dimensions;
   final List<String> tags;
+  final List<String> growthTags;
   final String? comment;
   final bool anonymous;
   final String? contextTag;
+  final String? campaignId; // set when answering a feedback campaign link
 
   FeedbackDraft({
     required this.targetPhoneHash,
     required this.dimensions,
     required this.tags,
+    this.growthTags = const [],
     this.comment,
     this.anonymous = false,
     this.contextTag,
+    this.campaignId,
   });
 
   Map<String, dynamic> toCallable() => {
         'targetPhoneHash': targetPhoneHash,
         'dimensions': dimensions,
         'tags': tags,
+        'growthTags': growthTags,
         'comment': comment,
         'anonymous': anonymous,
         'contextTag': contextTag,
+        'campaignId': campaignId,
       };
 }
 
@@ -250,18 +283,24 @@ class GamificationState {
 class FeedbackRequest {
   final String id;
   final String ownerUid;
+  final String? ownerPhoneHash;
+  final String? ownerName;
   final String? message;
   final List<String> focusDimensions;
   final DateTime createdAt;
   final int responseCount;
+  final String status;
 
   FeedbackRequest({
     required this.id,
     required this.ownerUid,
+    this.ownerPhoneHash,
+    this.ownerName,
     this.message,
     this.focusDimensions = const [],
     required this.createdAt,
     this.responseCount = 0,
+    this.status = 'active',
   });
 
   factory FeedbackRequest.fromDoc(DocumentSnapshot doc) {
@@ -269,10 +308,13 @@ class FeedbackRequest {
     return FeedbackRequest(
       id: doc.id,
       ownerUid: d['ownerUid'] as String? ?? '',
+      ownerPhoneHash: d['ownerPhoneHash'] as String?,
+      ownerName: d['ownerName'] as String?,
       message: d['message'] as String?,
       focusDimensions: List<String>.from(d['focusDimensions'] ?? const []),
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       responseCount: (d['responseCount'] as num?)?.toInt() ?? 0,
+      status: d['status'] as String? ?? 'active',
     );
   }
 
@@ -280,4 +322,51 @@ class FeedbackRequest {
         'message': message,
         'focusDimensions': focusDimensions,
       };
+}
+
+// ─── Circles ─────────────────────────────────────────────────────────────────
+
+/// A small group (friends, a team, a class section) joined by code.
+class Circle {
+  final String id;
+  final String name;
+  final String code;
+  final String createdBy;
+  final int memberCount;
+
+  Circle({
+    required this.id,
+    required this.name,
+    required this.code,
+    required this.createdBy,
+    this.memberCount = 0,
+  });
+
+  factory Circle.fromDoc(DocumentSnapshot doc) {
+    final d = (doc.data() as Map<String, dynamic>?) ?? {};
+    return Circle(
+      id: doc.id,
+      name: d['name'] ?? '',
+      code: d['code'] ?? '',
+      createdBy: d['createdBy'] ?? '',
+      memberCount: (d['memberCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class CircleMember {
+  final String uid;
+  final String displayName;
+  final int given;
+
+  CircleMember({required this.uid, required this.displayName, this.given = 0});
+
+  factory CircleMember.fromDoc(DocumentSnapshot doc) {
+    final d = (doc.data() as Map<String, dynamic>?) ?? {};
+    return CircleMember(
+      uid: doc.id,
+      displayName: d['displayName'] ?? 'Member',
+      given: (d['given'] as num?)?.toInt() ?? 0,
+    );
+  }
 }

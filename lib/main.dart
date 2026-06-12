@@ -14,10 +14,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/prefs.dart';
+import 'core/remote_config.dart';
 import 'core/theme.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'router.dart';
 import 'shared/error_view.dart';
+
+/// Global messenger so FCM foreground messages can surface an in-app banner
+/// from outside the widget tree.
+final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 /// Set true to run the app against the local Firebase Emulator Suite
 /// (`firebase emulators:start`). Lets the full flow be tested with no cloud
@@ -72,6 +78,10 @@ Future<void> main() async {
           !kDebugMode && !useEmulator);
 
       _initFcm();
+
+      // Remote Config — growth levers (invite copy A/B, event flags).
+      // Non-blocking with safe defaults.
+      unawaited(initRemoteConfig());
     } catch (e, st) {
       // Allows the UI shell to load even before a real Firebase project is
       // wired; never let bootstrap failure white-screen the app.
@@ -115,7 +125,20 @@ void _initFcm() {
 
   messaging.getToken().then(saveToken);
   messaging.onTokenRefresh.listen(saveToken);
-  FirebaseMessaging.onMessage.listen((_) {});
+
+  // Foreground messages: surface as an in-app banner (OS notifications only
+  // show in background). Keeps streak-risk / campaign pushes visible mid-use.
+  FirebaseMessaging.onMessage.listen((message) {
+    final n = message.notification;
+    if (n == null) return;
+    scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 5),
+      content: Text(
+        n.body == null ? (n.title ?? '') : '${n.title ?? ''}\n${n.body!}',
+      ),
+    ));
+  });
 }
 
 class WallApp extends ConsumerWidget {
@@ -127,7 +150,10 @@ class WallApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'The Wall',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: scaffoldMessengerKey,
       theme: AppTheme.dark,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
     );
   }

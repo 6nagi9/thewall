@@ -5,10 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
 import '../../shared/wall_ui.dart';
+import '../circles/circles_screen.dart';
 
-/// Discover: opt-in leaderboards ranking CONTRIBUTION, GROWTH and OPENNESS.
-/// Never "highest-rated people" (avoids comparison harm + defamation).
-/// Only users who have opted in appear on leaderboards.
+/// Discover: circles first (your people), then opt-in leaderboards ranking
+/// CONTRIBUTION, GROWTH and OPENNESS. Never "highest-rated people"
+/// (avoids comparison harm + defamation). Only opted-in users appear.
 class DiscoverScreen extends ConsumerWidget {
   const DiscoverScreen({super.key});
 
@@ -16,7 +17,7 @@ class DiscoverScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final db = ref.watch(firestoreProvider);
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         body: SafeArea(
           bottom: false,
@@ -44,6 +45,7 @@ class DiscoverScreen extends ConsumerWidget {
                 tabAlignment: TabAlignment.start,
                 padding: EdgeInsets.symmetric(horizontal: 12),
                 tabs: [
+                  Tab(text: 'Circles'),
                   Tab(text: 'Contribution'),
                   Tab(text: 'Growth'),
                   Tab(text: 'Openness'),
@@ -52,6 +54,7 @@ class DiscoverScreen extends ConsumerWidget {
               Expanded(
                 child: TabBarView(
                   children: [
+                    const CirclesTab(),
                     _Board(
                       stream: db
                           .collection('gamification')

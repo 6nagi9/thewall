@@ -6,6 +6,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/badge_definitions.dart';
+import '../../core/constants.dart';
+import '../../core/share_helpers.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
 import '../../shared/wall_ui.dart';
@@ -13,6 +15,7 @@ import '../gamification/badges_screen.dart';
 import '../legal/legal_screens.dart';
 import '../premium/analytics_screen.dart';
 import '../premium/premium_screen.dart';
+import '../self_assessment/self_assessment_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -66,18 +69,20 @@ class SettingsScreen extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            if (user?.premium == true) ...[
+                            if (user?.isPremium == true) ...[
                               const Icon(Icons.verified_rounded,
                                   size: 14, color: AppTheme.goldSoft),
                               const SizedBox(width: 4),
                             ],
                             Text(
-                              user?.premium == true
-                                  ? 'Premium'
+                              user?.isPremium == true
+                                  ? (user!.premium
+                                      ? 'Premium'
+                                      : 'Premium (referral reward)')
                                   : 'Free plan',
                               style: AppTheme.body(
                                   size: 12.5,
-                                  color: user?.premium == true
+                                  color: user?.isPremium == true
                                       ? AppTheme.goldSoft
                                       : AppTheme.ink400),
                             ),
@@ -86,7 +91,7 @@ class SettingsScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  if (user?.premium != true)
+                  if (user?.isPremium != true)
                     TextButton(
                       onPressed: () => Navigator.push(
                           context,
@@ -146,7 +151,7 @@ class SettingsScreen extends ConsumerWidget {
                 iconColor: AppTheme.clay,
                 title: 'Trends',
                 subtitle: 'How your scores change over time',
-                trailing: user?.premium != true
+                trailing: user?.isPremium != true
                     ? Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
@@ -178,6 +183,53 @@ class SettingsScreen extends ConsumerWidget {
                   HapticFeedback.selectionClick();
                   repo.setLeaderboardOptIn(v);
                 },
+              ),
+            ]).entrance(++i),
+            const SizedBox(height: 24),
+
+            // ── Sharing & growth ─────────────────────────────────────────
+            SectionLabel('Sharing & growth').entrance(++i),
+            _SettingsGroup(children: [
+              _SwitchTile(
+                icon: Icons.public_rounded,
+                title: 'Public web wall',
+                subtitle: user?.publicSlug != null
+                    ? 'Live — share your page from here'
+                    : 'Publish a page with only what you disclose',
+                value: user?.publicSlug != null,
+                onChanged: (v) => _togglePublish(context, repo, v),
+              ),
+              if (user?.publicSlug != null)
+                _SettingsTile(
+                  icon: Icons.link_rounded,
+                  iconColor: AppTheme.clay,
+                  title: 'Share my wall link',
+                  subtitle: '${K.webBase}/w/${user!.publicSlug}',
+                  onTap: () => shareViaWhatsApp(
+                      'See what people who know me say — my Wall: '
+                      '${K.webBase}/w/${user.publicSlug}'),
+                ),
+              _SettingsTile(
+                icon: Icons.psychology_outlined,
+                iconColor: AppTheme.sage,
+                title: 'My self-assessment',
+                subtitle:
+                    'Powers the "you vs others" comparison on your wall',
+                chevron: true,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const SelfAssessmentScreen())),
+              ),
+              _SettingsTile(
+                icon: Icons.card_giftcard_rounded,
+                iconColor: AppTheme.gold,
+                title: 'Invite rewards',
+                subtitle: (user?.inviteJoins ?? 0) == 0
+                    ? 'Each friend who joins from your invite = 7 days Premium'
+                    : '${user!.inviteJoins} joined · ${user.inviteJoins * 7} Premium days earned',
+                onTap: () => _snack(context,
+                    'Invites are sent when you give feedback to someone not yet on The Wall.'),
               ),
             ]).entrance(++i),
             const SizedBox(height: 24),
@@ -244,6 +296,43 @@ class SettingsScreen extends ConsumerWidget {
   void _snack(BuildContext context, String msg) =>
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(msg)));
+
+  Future<void> _togglePublish(
+      BuildContext context, WallRepository repo, bool publish) async {
+    HapticFeedback.selectionClick();
+    if (!publish) {
+      await repo.setWallPublish(false);
+      if (context.mounted) _snack(context, 'Your public wall is offline.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Publish your wall?'),
+        content: const Text(
+            'Creates a public web page at a private random link showing ONLY '
+            'what you\'ve disclosed: your name, top tags, scores and openness. '
+            'You can take it down anytime.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              child: const Text('Publish')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      final link = await repo.setWallPublish(true);
+      if (context.mounted && link != null) {
+        _snack(context, 'Live at $link');
+      }
+    } catch (e) {
+      if (context.mounted) _snack(context, 'Could not publish: $e');
+    }
+  }
 
   Future<void> _exportData(
       BuildContext context, WallRepository repo) async {

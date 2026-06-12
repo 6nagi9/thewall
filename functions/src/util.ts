@@ -155,26 +155,176 @@ export function isBurst(recentCount: number, windowReviews: number): boolean {
   return windowReviews > 5 && recentCount > 5;
 }
 
+// ─── Context-adaptive taxonomy (server mirror of lib/core/constants.dart) ─────
+//
+// COMPLIANCE: every dimension/tag is subjective, behavioural, and framed as
+// opinion. No protected attributes (caste, religion, health, sexuality,
+// politics, race). Growth tags are constructively framed and capped at 2 per
+// review; they never enter public aggregates (owner-visible inbox only,
+// unless the owner discloses the whole item).
+
+export const CONTEXT_DIMENSIONS: Record<string, string[]> = {
+  Friend: ["trustworthiness", "fun", "listening", "shows_up"],
+  Work: ["punctuality", "professionalism", "communication", "reliability"],
+  Client: ["punctuality", "professionalism", "communication", "reliability"],
+  College: ["team_player", "dependable", "ideas", "energy"],
+  Family: ["caring", "dependable_fam", "patience", "generosity"],
+  Community: ["caring", "dependable_fam", "patience", "generosity"],
+  Other: ["punctuality", "professionalism", "communication", "reliability"],
+};
+
+export const ALLOWED_DIMENSION_KEYS = new Set(
+  Object.values(CONTEXT_DIMENSIONS).flat()
+);
+
+export const ALLOWED_TAGS = new Set([
+  // Work / professional
+  "Great listener", "Solution-oriented", "Collaborative", "Well prepared",
+  "Follows through", "Calm under pressure", "Detail-oriented",
+  "Big-picture thinker", "Generous with time", "Direct", "Patient", "Motivating",
+  // Friend
+  "Hype person", "Keeps secrets", "Brutally honest", "Always down",
+  "Great company", "Remembers the little things", "Shows up in a crisis",
+  "Makes you laugh",
+  // College
+  "Carries group projects", "Notes dealer", "Chill under deadline",
+  "Idea machine", "Study buddy", "Lab partner of dreams",
+  // Family / community
+  "Shows up when it matters", "Good with kids", "Fixer",
+  "Holds everyone together", "Quietly generous", "Wise counsel",
+]);
+
+export const ALLOWED_GROWTH_TAGS = new Set([
+  "Could be more punctual", "Hard to reach sometimes",
+  "Interrupts when excited", "Could listen more", "Spreads too thin",
+  "Could follow through more", "Takes on too much", "Could be more patient",
+  "Cancels plans sometimes", "Could share more openly",
+]);
+
+export const MAX_GROWTH_TAGS = 2;
+
+/** Validate a submitted review payload against the taxonomy. */
+export function validateReviewTaxonomy(
+  dimensions: Record<string, unknown>,
+  tags: unknown[],
+  growthTags: unknown[]
+): { ok: boolean; reason?: string } {
+  for (const k of Object.keys(dimensions || {})) {
+    if (!ALLOWED_DIMENSION_KEYS.has(k)) {
+      return { ok: false, reason: `Unknown dimension: ${k}` };
+    }
+  }
+  for (const t of tags || []) {
+    if (typeof t !== "string" || !ALLOWED_TAGS.has(t)) {
+      return { ok: false, reason: "Unknown tag." };
+    }
+  }
+  if ((growthTags || []).length > MAX_GROWTH_TAGS) {
+    return { ok: false, reason: `At most ${MAX_GROWTH_TAGS} growth tags.` };
+  }
+  for (const t of growthTags || []) {
+    if (typeof t !== "string" || !ALLOWED_GROWTH_TAGS.has(t)) {
+      return { ok: false, reason: "Unknown growth tag." };
+    }
+  }
+  return { ok: true };
+}
+
+// ─── Growth-loop helpers ──────────────────────────────────────────────────────
+
+/** URL-safe random slug for public wall pages (not derived from phone hash). */
+export function randomSlug(length = 10): string {
+  const alphabet = "abcdefghijkmnpqrstuvwxyz23456789"; // no l/o/0/1 lookalikes
+  const bytes = crypto.randomBytes(length);
+  let s = "";
+  for (let i = 0; i < length; i++) s += alphabet[bytes[i] % alphabet.length];
+  return s;
+}
+
+/** Human-friendly 6-char circle join code. */
+export function circleCode(): string {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.randomBytes(6);
+  let s = "";
+  for (let i = 0; i < 6; i++) s += alphabet[bytes[i] % alphabet.length];
+  return s;
+}
+
+/** Effective premium check: lifetime flag OR a referral-granted window. */
+export function isPremiumNow(
+  premium: unknown,
+  premiumUntilMs: number | null | undefined,
+  nowMs = Date.now()
+): boolean {
+  if (premium === true) return true;
+  return typeof premiumUntilMs === "number" && premiumUntilMs > nowMs;
+}
+
+/**
+ * Referral reward: extend premiumUntil by `days`, never beyond `capDays`
+ * in the future. Extensions stack from the current expiry (or now).
+ */
+export function extendPremiumUntil(
+  currentUntilMs: number | null | undefined,
+  nowMs: number,
+  days = 7,
+  capDays = 90
+): number {
+  const base = Math.max(currentUntilMs ?? 0, nowMs);
+  const extended = base + days * 86_400_000;
+  const cap = nowMs + capDays * 86_400_000;
+  return Math.min(extended, cap);
+}
+
+/** Feedback Friday: contribution points double on Fridays (Asia/Kolkata). */
+export function isFridayInIndia(nowMs = Date.now()): boolean {
+  // IST is UTC+5:30, no DST.
+  const ist = new Date(nowMs + 5.5 * 3_600_000);
+  return ist.getUTCDay() === 5;
+}
+
+/** Contribution points for one give (Feedback Friday doubles them). */
+export function contributionPoints(nowMs = Date.now()): number {
+  return isFridayInIndia(nowMs) ? 20 : 10;
+}
+
+/**
+ * Tease-rich invite copy. Counts what was left (tags + comment + dimensions)
+ * without ever revealing content — the unlock is the hook.
+ */
+export function inviteTease(
+  authorName: string | null,
+  tagCount: number,
+  hasComment: boolean
+): string {
+  const who = authorName || "Someone";
+  const n = tagCount + (hasComment ? 1 : 0);
+  if (n >= 2) return `${who} said ${n} things about you on The Wall 👀`;
+  return `${who} left you feedback on The Wall 👀`;
+}
+
 // ─── Gamification helpers ─────────────────────────────────────────────────────
 
 /**
  * Award a badge to the user if they haven't already earned it.
  * Reads the gamification doc once, appends, writes once (idempotent).
+ * Returns true when the badge was newly awarded (so callers can notify).
  */
 export async function awardBadgeIfNeeded(
   db: Firestore,
   uid: string,
   badgeId: string
-): Promise<void> {
+): Promise<boolean> {
   const gamRef = db.collection("gamification").doc(uid);
   const snap = await gamRef.get();
   const d = snap.data() || {};
   const badges = (d.badges || []) as Array<{ id: string }>;
-  if (badges.some((b) => b.id === badgeId)) return; // already awarded
+  if (badges.some((b) => b.id === badgeId)) return false; // already awarded
   await gamRef.set(
     { badges: [...badges, { id: badgeId, awardedAt: Timestamp.now() }] },
     { merge: true }
   );
+  return true;
 }
 
 /**
