@@ -103,11 +103,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final otpStage = _verificationId != null;
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - 56),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
               const Spacer(),
               const BrickMark(size: 64),
               const SizedBox(height: 24),
@@ -161,7 +165,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 style: AppTheme.body(
                     size: 12, color: AppTheme.ink400, height: 1.5),
               ).animate().fadeIn(delay: 600.ms),
-            ],
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),

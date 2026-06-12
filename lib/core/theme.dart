@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────
 /// The Wall — "Clay & Ink" design system.
@@ -47,6 +46,11 @@ class AppTheme {
   static const Color emerald = sage;
 
   // ── Typography ────────────────────────────────────────────────────────
+  // Fonts are bundled assets (see pubspec.yaml) — no runtime fetch, so the
+  // brand type renders offline and on poor connections.
+  static const String _displayFamily = 'BricolageGrotesque';
+  static const String _bodyFamily = 'SchibstedGrotesk';
+
   /// Display face — used for screen titles, hero numbers, brand moments.
   static TextStyle display({
     double size = 28,
@@ -55,7 +59,8 @@ class AppTheme {
     double? height,
     double letterSpacing = -0.5,
   }) =>
-      GoogleFonts.bricolageGrotesque(
+      TextStyle(
+        fontFamily: _displayFamily,
         fontSize: size,
         fontWeight: weight,
         color: color,
@@ -71,7 +76,8 @@ class AppTheme {
     double? height,
     double letterSpacing = 0,
   }) =>
-      GoogleFonts.schibstedGrotesk(
+      TextStyle(
+        fontFamily: _bodyFamily,
         fontSize: size,
         fontWeight: weight,
         color: color,
@@ -80,10 +86,9 @@ class AppTheme {
       );
 
   static TextTheme _textTheme(TextTheme base) {
-    final t = GoogleFonts.schibstedGroteskTextTheme(base).apply(
-      bodyColor: ink200,
-      displayColor: paper,
-    );
+    final t = base
+        .apply(fontFamily: _bodyFamily)
+        .apply(bodyColor: ink200, displayColor: paper);
     return t.copyWith(
       displayLarge: display(size: 44, weight: FontWeight.w800),
       displayMedium: display(size: 34, weight: FontWeight.w800),

@@ -56,7 +56,6 @@ dependencies:
   connectivity_plus: ^7.1.1
   package_info_plus: ^10.1.0
   flutter_local_notifications: ^22.0.0
-  google_fonts: ^6.2.1
   flutter_animate: ^4.5.0
   url_launcher: ^6.3.2
   path_provider: ^2.1.5
@@ -92,6 +91,33 @@ flutter:
 
   assets:
     - assets/icon/
+
+  # Bundled brand fonts (Clay & Ink). Shipped as assets rather than fetched at
+  # runtime via google_fonts — the app must render correctly offline / on poor
+  # connections (India-first) and never depend on fonts.gstatic.com.
+  fonts:
+    - family: BricolageGrotesque
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque-400.ttf
+          weight: 400
+        - asset: assets/fonts/BricolageGrotesque-600.ttf
+          weight: 600
+        - asset: assets/fonts/BricolageGrotesque-700.ttf
+          weight: 700
+        - asset: assets/fonts/BricolageGrotesque-800.ttf
+          weight: 800
+    - family: SchibstedGrotesk
+      fonts:
+        - asset: assets/fonts/SchibstedGrotesk-400.ttf
+          weight: 400
+        - asset: assets/fonts/SchibstedGrotesk-500.ttf
+          weight: 500
+        - asset: assets/fonts/SchibstedGrotesk-600.ttf
+          weight: 600
+        - asset: assets/fonts/SchibstedGrotesk-700.ttf
+          weight: 700
+        - asset: assets/fonts/SchibstedGrotesk-800.ttf
+          weight: 800
 
   # To add assets to your application, add an assets section, like this:
   # assets:
