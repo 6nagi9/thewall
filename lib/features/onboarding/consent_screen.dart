@@ -45,7 +45,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           );
       // Router redirects to home once the user doc shows onboarded.
     } catch (e) {
-      setState(() => _error = '$e');
+      if (mounted) setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
