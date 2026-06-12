@@ -109,22 +109,63 @@ Future<void> main() async {
 
 /// Requests notification permission and keeps the FCM token in sync with
 /// Firestore so Cloud Functions can deliver push notifications.
+///
+/// Every FCM call is individually guarded: `getToken()` legitimately fails
+/// with `SERVICE_NOT_AVAILABLE` on emulators and devices with stale/absent
+/// Google Play Services, and on iOS Simulators without a configured APNS
+/// token. Those are environmental, never fatal — push simply stays off for
+/// that session, and the rest of the app must keep working.
 void _initFcm() {
   final messaging = FirebaseMessaging.instance;
-  messaging.requestPermission(provisional: true);
 
-  void saveToken(String? token) {
+  Future<void> saveToken(String? token) async {
     if (token == null) return;
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .update({'fcmToken': token}).catchError((_) {});
+    if (user == null) return; // re-synced on the next onTokenRefresh after login
+    try {
+      // `update` (not set+merge) so this never violates the users/{uid}
+      // create rule, which only permits the onboarding field set.
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'fcmToken': token});
+    } catch (_) {
+      // Doc may not exist yet (pre-onboarding) — harmless.
+    }
   }
 
-  messaging.getToken().then(saveToken);
-  messaging.onTokenRefresh.listen(saveToken);
+  // Permission + token fetch run in a guarded zone so a rejected Future never
+  // escapes as an unhandled async error (which the debugger pauses on).
+  () async {
+    try {
+      await messaging.requestPermission(provisional: true);
+    } catch (e) {
+      debugPrint('FCM requestPermission skipped: $e');
+    }
+    try {
+      await saveToken(await messaging.getToken());
+    } catch (e) {
+      debugPrint('FCM getToken unavailable (push disabled this session): $e');
+    }
+  }();
+
+  messaging.onTokenRefresh.listen(
+    saveToken,
+    onError: (Object e) =>
+        debugPrint('FCM token refresh error (ignored): $e'),
+  );
+
+  // The first getToken() above runs before auth resolves, so its token is
+  // dropped (no user yet). Re-fetch and persist whenever a user signs in —
+  // without this the token never reaches Firestore and no push can be sent.
+  FirebaseAuth.instance.authStateChanges().listen((user) async {
+    if (user == null) return;
+    try {
+      await saveToken(await messaging.getToken());
+    } catch (e) {
+      debugPrint('FCM getToken on sign-in unavailable: $e');
+    }
+  });
 
   // Foreground messages: surface as an in-app banner (OS notifications only
   // show in background). Keeps streak-risk / campaign pushes visible mid-use.
