@@ -30,7 +30,7 @@ import {
 
 // Secrets (set via `firebase functions:secrets:set <NAME>`).
 const wallServerSalt = defineSecret("WALL_SERVER_SALT");
-const perspectiveKey = defineSecret("PERSPECTIVE_API_KEY"); // optional moderation
+const openaiKey = defineSecret("OPENAI_API_KEY"); // optional moderation (OpenAI Moderation API)
 const appleSharedSecret = defineSecret("APPLE_SHARED_SECRET"); // iOS IAP
 const anthropicKey = defineSecret("ANTHROPIC_API_KEY"); // AI wall summary (premium)
 
@@ -96,7 +96,7 @@ async function awardBadgeWithPush(uid: string, badgeId: string): Promise<void> {
  * dedup → escrow-or-apply → recompute aggregate → credit give-to-get → badges.
  */
 export const submitReview = onCall(
-  { secrets: [wallServerSalt, perspectiveKey] },
+  { secrets: [wallServerSalt, openaiKey] },
   async (req) => {
   const uid = requireAuth(req.auth);
   const {
@@ -786,7 +786,7 @@ export const setLeaderboardOptIn = onCall(async (req) => {
  * Handles both applied reviews and still-escrowed invites.
  */
 export const editReview = onCall(
-  { secrets: [wallServerSalt, perspectiveKey] },
+  { secrets: [wallServerSalt, openaiKey] },
   async (req) => {
     const uid = requireAuth(req.auth);
     const {

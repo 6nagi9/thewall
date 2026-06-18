@@ -83,13 +83,10 @@ export function opennessLabel(disclosed: number, received: number): {
  * Two stages, defence-in-depth:
  *   2a. Deterministic blocklist — always on, zero-latency, catches obvious
  *       slurs even if the external API is down or unconfigured.
- *   2b. Google Perspective API — ML toxicity/threat/identity-attack scoring,
- *       enabled when PERSPECTIVE_API_KEY is set. Fails OPEN on API error
- *       (the blocklist has already run), so a transient outage never blocks
- *       legitimate feedback.
- *
- * The key is read from the environment at call time so it works with Cloud
- * Functions v2 bound secrets.
+ *   2b. OpenAI Moderation API — ML scoring across hate, harassment, violence,
+ *       self-harm, and sexual content. Free endpoint, no per-call cost.
+ *       Enabled when OPENAI_API_KEY is set. Fails OPEN on API error so a
+ *       transient outage never blocks legitimate feedback.
  */
 const BLOCKED = [
   "idiot", "stupid", "moron", "loser", "ugly", "hate you", "worthless",
@@ -110,38 +107,30 @@ export async function moderateText(text?: string | null): Promise<{
     }
   }
 
-  // 2b — Perspective API (optional; configured via secret). The "REPLACE_ME"
-  // sentinel means the secret exists for deploy but no real key is set yet, so
-  // we stay blocklist-only without making a doomed API call.
-  const key = process.env.PERSPECTIVE_API_KEY;
+  // 2b — OpenAI Moderation API. The "REPLACE_ME" sentinel means the secret
+  // exists for deploy but no real key is configured yet — stay blocklist-only.
+  const key = process.env.OPENAI_API_KEY;
   if (!key || key === "REPLACE_ME") return { ok: true };
   try {
-    const res = await fetch(
-      `https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${key}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          comment: { text },
-          languages: ["en"],
-          requestedAttributes: {
-            TOXICITY: {},
-            SEVERE_TOXICITY: {},
-            INSULT: {},
-            THREAT: {},
-            IDENTITY_ATTACK: {},
-          },
-        }),
-      }
-    );
+    const res = await fetch("https://api.openai.com/v1/moderations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${key}`,
+      },
+      body: JSON.stringify({ input: text }),
+    });
     if (!res.ok) return { ok: true }; // fail open
     const data = (await res.json()) as {
-      attributeScores?: Record<string, { summaryScore?: { value?: number } }>;
+      results?: Array<{
+        flagged?: boolean;
+        categories?: Record<string, boolean>;
+        category_scores?: Record<string, number>;
+      }>;
     };
-    const s = data.attributeScores || {};
-    const score = (k: string) => s[k]?.summaryScore?.value ?? 0;
-    const toxic = Math.max(score("SEVERE_TOXICITY"), score("TOXICITY"));
-    if (toxic >= 0.8 || score("THREAT") >= 0.8 || score("IDENTITY_ATTACK") >= 0.7) {
+    const result = data.results?.[0];
+    if (!result) return { ok: true };
+    if (result.flagged) {
       return { ok: false, reason: "Comment failed moderation." };
     }
     return { ok: true };
