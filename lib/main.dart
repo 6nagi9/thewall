@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/app_gate.dart';
+import 'core/consent.dart';
 import 'core/prefs.dart';
 import 'core/remote_config.dart';
 import 'core/theme.dart';
@@ -62,9 +63,16 @@ Future<void> main() async {
             .useFunctionsEmulator(host, 5001);
       }
 
-      // Crash reporting — disabled on the emulator/debug to avoid noise.
+      // Telemetry (Analytics + Crashlytics) is OFF until the user consents at
+      // the consent screen, and stays off if they opt out in Settings — GDPR/
+      // ePrivacy require prior consent, CCPA an honoured opt-out. Never collect
+      // in debug/emulator. The error handlers stay registered regardless; with
+      // collection disabled they simply record nothing.
+      final telemetryAllowed = !kDebugMode && !useEmulator;
+      final analyticsConsent =
+          telemetryAllowed && (prefs.getBool(kAnalyticsConsentKey) ?? false);
       await FirebaseCrashlytics.instance
-          .setCrashlyticsCollectionEnabled(!kDebugMode && !useEmulator);
+          .setCrashlyticsCollectionEnabled(analyticsConsent);
       FlutterError.onError = (details) {
         FirebaseCrashlytics.instance.recordFlutterFatalError(details);
         if (kDebugMode) FlutterError.presentError(details);
@@ -73,10 +81,8 @@ Future<void> main() async {
         FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
         return true;
       };
-
-      // Analytics — first-open / engagement baseline.
-      await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
-          !kDebugMode && !useEmulator);
+      await FirebaseAnalytics.instance
+          .setAnalyticsCollectionEnabled(analyticsConsent);
 
       _initFcm();
 

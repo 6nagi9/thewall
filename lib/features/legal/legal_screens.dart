@@ -87,9 +87,11 @@ class PrivacyPolicyScreen extends StatelessWidget {
       title: 'Privacy Policy',
       intro:
           'Known is built consent-first. We process your personal data only '
-          'with your consent under the Digital Personal Data Protection Act, '
-          '2023 (India). This policy explains what we collect, why, and the '
-          'rights you have.',
+          'with your consent, and our practices are designed to meet the major '
+          'global privacy regimes — the EU/UK GDPR, the California CCPA/CPRA, '
+          'and India\'s Digital Personal Data Protection Act, 2023 (DPDP). '
+          'This policy explains what we collect, why, and the rights you have '
+          'wherever you live.',
       sections: [
         _Section('1. What we collect', [
           '• Your phone number — to authenticate you and to derive a hashed '
@@ -97,7 +99,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
           '• Your display name and the structured feedback you give and '
               'receive (ratings, tags, optional comments).',
           '• A device push token, to notify you about new feedback.',
-          '• Basic, anonymised usage analytics to improve the app.',
+          '• Basic, pseudonymised usage analytics and crash diagnostics to '
+              'improve the app — collected only after you consent, and '
+              'switchable off anytime in Settings.',
         ]),
         _Section('2. What we never collect', [
           'We do not store your raw address book. Contacts are hashed on your '
@@ -105,19 +109,26 @@ class PrivacyPolicyScreen extends StatelessWidget {
               'joined and consented. No wall exists for a non-member.',
         ]),
         _Section('3. Legal basis', [
-          'We rely on your explicit, withdrawable consent, captured at sign-up. '
-              'You may withdraw consent at any time by deleting your account.',
+          'We rely on your explicit, withdrawable consent, captured at sign-up '
+              '(GDPR Art. 6(1)(a) and 7; DPDP s. 6; and your right to opt out '
+              'under the CCPA/CPRA). You may withdraw consent at any time by '
+              'deleting your account. We never sell or share your personal '
+              'information for cross-context behavioural advertising.',
         ]),
         _Section('4. How feedback visibility works', [
           'Feedback others give you stays private until you choose to make it '
               'public on your Wall. A reviewer may appear "anonymous" to other '
               'users; however, we retain a recoverable identity mapping so we '
-              'can comply with lawful requests under the IT Act. Anonymous '
-              'never means anonymous to law enforcement.',
+              'can comply with lawful requests from competent authorities '
+              '(including, in India, under the IT Act). Anonymous never means '
+              'anonymous to law enforcement.',
         ]),
-        _Section('5. Where your data is stored', [
-          'All data is stored in India (Google Cloud asia-south1, Mumbai), '
-              'consistent with DPDP transfer rules.',
+        _Section('5. Where your data is stored & international transfers', [
+          'Your data is hosted on Google Cloud, encrypted in transit and at '
+              'rest, currently in the Mumbai (asia-south1) region. If you use '
+              'Known from outside India, your data is transferred to and '
+              'processed in India under appropriate safeguards — including '
+              'Standard Contractual Clauses for EU/UK users.',
         ]),
         _Section('6. Retention', [
           'Feedback drafted for someone who has not yet joined is encrypted in '
@@ -125,10 +136,15 @@ class PrivacyPolicyScreen extends StatelessWidget {
               'you delete your account, your profile, your Wall, and feedback '
               'about you are permanently erased.',
         ]),
-        _Section('7. Your rights (DPDP)', [
-          'You may access and export your data, request correction, withdraw '
-              'consent, and erase your account — all from Settings. You also '
-              'have a right to grievance redressal via our Grievance Officer.',
+        _Section('7. Your rights', [
+          'Wherever you live, you may access and export your data, request '
+              'correction, withdraw consent, and erase your account — all from '
+              'Settings. Depending on your jurisdiction you may also have the '
+              'right to object to or restrict processing, to data portability '
+              '(GDPR), and to opt out of any "sale" or "sharing" and to '
+              'non-discrimination (CCPA/CPRA). Indian users have all rights '
+              'under the DPDP Act 2023, including grievance redressal via our '
+              'Grievance Officer.',
         ]),
         _Section('8. Age', [
           'Known is for users aged 18 and above only.',
@@ -180,8 +196,11 @@ class TermsScreen extends StatelessWidget {
               'law, Known is not liable for user-generated content.',
         ]),
         _Section('7. Governing law', [
-          'These terms are governed by the laws of India. Disputes are subject '
-              'to the jurisdiction of Indian courts.',
+          'These terms are governed by the laws of India, and disputes are '
+              'subject to the jurisdiction of the courts of India. Nothing here '
+              'removes any mandatory consumer-protection or data-protection '
+              'rights you have under the laws of your country of residence — '
+              'those rights continue to apply to you regardless of this clause.',
         ]),
       ],
     );

@@ -78,7 +78,7 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
                     children: [
                       const BrickMark(size: 34, animate: false),
                       const SizedBox(width: 10),
-                      Text('THE WALL · WRAPPED',
+                      Text('KNOWN · WRAPPED',
                           style: AppTheme.body(
                               size: 11,
                               weight: FontWeight.w800,

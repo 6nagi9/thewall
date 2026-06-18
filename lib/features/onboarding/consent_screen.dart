@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/consent.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
 import '../../shared/wall_ui.dart';
@@ -43,6 +44,9 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
             displayName: _nameCtrl.text.trim(),
             phoneNumber: phone,
           );
+      // Consent granted here also turns on pseudonymised analytics & crash
+      // reporting (off until now; revocable anytime in Settings).
+      await ref.read(analyticsConsentProvider.notifier).set(true);
       // Router redirects to home once the user doc shows onboarded.
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
@@ -74,7 +78,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
               icon: Icons.lock_outline,
               title: 'Minimal data',
               text:
-                  'Your phone number and the structured feedback you give and receive. Nothing else.',
+                  'Your phone number and the structured feedback you give and receive — plus pseudonymised analytics to improve the app, which you can switch off anytime in Settings.',
             ).entrance(++i),
             _ConsentPoint(
               icon: Icons.visibility_off_outlined,

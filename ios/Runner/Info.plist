@@ -33,7 +33,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSContactsUsageDescription</key>
-	<string>The Wall matches your contacts on-device (hashed) so you can give feedback to people you know. Your address book never leaves your phone.</string>
+	<string>Known matches your contacts on-device (hashed) so you can give feedback to people you know. Your address book never leaves your phone.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

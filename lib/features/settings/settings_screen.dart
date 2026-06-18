@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/app_review.dart';
 import '../../core/badge_definitions.dart';
+import '../../core/consent.dart';
 import '../../core/constants.dart';
 import '../../core/share_helpers.dart';
 import '../../core/theme.dart';
@@ -122,6 +123,21 @@ class SettingsScreen extends ConsumerWidget {
                 title: 'Consent & audit log',
                 subtitle: 'Where your data lives and why',
                 onTap: () => _showAuditLog(context, user?.consentAt),
+              ),
+              _SettingsTile(
+                icon: Icons.insights_outlined,
+                title: 'Usage analytics',
+                subtitle: 'Pseudonymised; helps us improve the app',
+                onTap: () => ref
+                    .read(analyticsConsentProvider.notifier)
+                    .set(!ref.read(analyticsConsentProvider)),
+                trailing: Switch(
+                  value: ref.watch(analyticsConsentProvider),
+                  onChanged: (v) {
+                    HapticFeedback.selectionClick();
+                    ref.read(analyticsConsentProvider.notifier).set(v);
+                  },
+                ),
               ),
               _SettingsTile(
                 icon: Icons.delete_forever_outlined,
@@ -468,7 +484,8 @@ class SettingsScreen extends ConsumerWidget {
         content: const Text(
             'This permanently erases your account, your Wall, and all '
             'feedback about you. Feedback you wrote about others stays '
-            '(anonymised), as it is their data. This cannot be undone.'),
+            '(with your identity removed), as it is their data. This cannot '
+            'be undone.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
