@@ -76,21 +76,7 @@ structurally ~0 — every other growth idea is moot.
   (deferred deep-link via install referrer on Android; pasteboard or
   code-on-first-run fallback on iOS).
 
-### 2.2 🔴 P0 — The gate punishes exactly the users the loop recruits
-A user who joins *because feedback awaits them* must give **5** feedbacks before
-seeing the thing that brought them (`K.giveToGetThreshold`, enforced in
-`my_wall_screen.dart` soft-gate). That's asking for 5 favors before delivering the
-promised reward — a textbook activation cliff.
-
-**Fix — progressive reveal, not a wall:**
-- **1 give = 1 unlock.** Each feedback given unlocks one received item (oldest first).
-  First dopamine hit arrives in ~90 seconds instead of after 5 chores.
-- Show the locked items *blurred with real metadata* ("a colleague · 4 tags · ★★★★½")
-  — the tease is the motivator. (The soft-gate card already blurs; make it per-item.)
-- Keep 5 as the threshold for *aggregates/public wall* if desired; the constant stays,
-  the UX changes.
-- Touches: `K.giveToGetThreshold` semantics, `my_wall_screen.dart`, `getPublicWall` +
-  gate check in `functions/src/index.ts`.
+Lets 
 
 ### 2.3 🔴 P0 — The strongest loop is paywalled
 Feedback campaigns ("ask anyone for feedback via a link",

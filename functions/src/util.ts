@@ -299,8 +299,8 @@ export function inviteTease(
 ): string {
   const who = authorName || "Someone";
   const n = tagCount + (hasComment ? 1 : 0);
-  if (n >= 2) return `${who} said ${n} things about you on The Wall 👀`;
-  return `${who} left you feedback on The Wall 👀`;
+  if (n >= 2) return `${who} said ${n} things about you on Known 👀`;
+  return `${who} left you feedback on Known 👀`;
 }
 
 // ─── Gamification helpers ─────────────────────────────────────────────────────

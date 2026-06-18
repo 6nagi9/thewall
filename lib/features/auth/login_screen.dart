@@ -132,7 +132,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const Spacer(),
               const BrickMark(size: 64),
               const SizedBox(height: 24),
-              Text('The Wall', style: AppTheme.display(size: 38))
+              Text('Known', style: AppTheme.display(size: 38))
                   .animate()
                   .fadeIn(delay: 350.ms, duration: WallMotion.slow)
                   .slideY(begin: 0.15, end: 0, delay: 350.ms),

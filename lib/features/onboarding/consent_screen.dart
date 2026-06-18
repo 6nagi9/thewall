@@ -64,7 +64,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
               title: 'Claim your wall',
             ),
             Text(
-              'The Wall only works because everyone agrees to the same rules. '
+              'Known only works because everyone agrees to the same rules. '
               'Here\'s exactly what we do with your data:',
               style: AppTheme.body(
                   size: 14, color: AppTheme.ink300, height: 1.55),
@@ -130,7 +130,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                     },
                     controlAffinity: ListTileControlAffinity.leading,
                     title: Text(
-                      'I consent to The Wall processing my data for the purposes described above (DPDP Act, 2023).',
+                      'I consent to Known processing my data for the purposes described above (DPDP Act, 2023).',
                       style: AppTheme.body(
                           size: 14, color: AppTheme.ink100, height: 1.4),
                     ),

@@ -5,12 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/app_review.dart';
 import '../../core/badge_definitions.dart';
 import '../../core/constants.dart';
 import '../../core/share_helpers.dart';
 import '../../core/theme.dart';
 import '../../data/repositories.dart';
 import '../../shared/wall_ui.dart';
+import '../feedback_to_us/feedback_to_us_screen.dart';
 import '../gamification/badges_screen.dart';
 import '../legal/legal_screens.dart';
 import '../premium/analytics_screen.dart';
@@ -229,7 +231,7 @@ class SettingsScreen extends ConsumerWidget {
                     ? 'Each friend who joins from your invite = 7 days Premium'
                     : '${user!.inviteJoins} joined · ${user.inviteJoins * 7} Premium days earned',
                 onTap: () => _snack(context,
-                    'Invites are sent when you give feedback to someone not yet on The Wall.'),
+                    'Invites are sent when you give feedback to someone not yet on Known.'),
               ),
             ]).entrance(++i),
             const SizedBox(height: 24),
@@ -248,6 +250,39 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: 'grievance@thewall.app · 7-day response',
                 onTap: () =>
                     _snack(context, 'Contact: grievance@thewall.app'),
+              ),
+            ]).entrance(++i),
+            const SizedBox(height: 24),
+
+            // ── Help & feedback ──────────────────────────────────────────
+            SectionLabel('Help & feedback').entrance(++i),
+            _SettingsGroup(children: [
+              _SettingsTile(
+                icon: Icons.campaign_outlined,
+                iconColor: AppTheme.clay,
+                title: 'Send feedback or suggest a feature',
+                subtitle: 'Ideas, bugs, praise — straight to the team',
+                chevron: true,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const FeedbackToUsScreen())),
+              ),
+              _SettingsTile(
+                icon: Icons.star_outline_rounded,
+                iconColor: AppTheme.gold,
+                title: 'Rate Known',
+                subtitle: 'Enjoying the app? A review really helps',
+                chevron: true,
+                onTap: () => ref.read(appReviewProvider).openStoreListing(),
+              ),
+              _SettingsTile(
+                icon: Icons.ios_share_rounded,
+                title: 'Share Known',
+                subtitle: 'Invite friends to claim their wall',
+                onTap: () => shareViaWhatsApp(
+                    'I\'m on Known — honest feedback from people who know '
+                    'you, on your terms. Claim your wall: ${K.webBase}'),
               ),
             ]).entrance(++i),
             const SizedBox(height: 24),
@@ -594,7 +629,7 @@ class _AppVersionFooter extends StatelessWidget {
             const BrickMark(size: 22, animate: false),
             const SizedBox(height: 10),
             Text(
-              'The Wall · Data stored in India (asia-south1)',
+              'Known · Data stored in India (asia-south1)',
               style: AppTheme.body(size: 12, color: AppTheme.ink400),
             ),
             if (v.isNotEmpty) ...[

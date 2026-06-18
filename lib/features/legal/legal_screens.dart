@@ -86,7 +86,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     return const _LegalScaffold(
       title: 'Privacy Policy',
       intro:
-          'The Wall is built consent-first. We process your personal data only '
+          'Known is built consent-first. We process your personal data only '
           'with your consent under the Digital Personal Data Protection Act, '
           '2023 (India). This policy explains what we collect, why, and the '
           'rights you have.',
@@ -131,7 +131,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
               'have a right to grievance redressal via our Grievance Officer.',
         ]),
         _Section('8. Age', [
-          'The Wall is for users aged 18 and above only.',
+          'Known is for users aged 18 and above only.',
         ]),
       ],
     );
@@ -146,11 +146,11 @@ class TermsScreen extends StatelessWidget {
     return const _LegalScaffold(
       title: 'Terms of Use',
       intro:
-          'By using The Wall you agree to these terms. The Wall is a space for '
+          'By using Known you agree to these terms. Known is a space for '
           'honest, constructive, consent-based interpersonal feedback.',
       sections: [
         _Section('1. Eligibility', [
-          'You must be at least 18 years old to use The Wall.',
+          'You must be at least 18 years old to use Known.',
         ]),
         _Section('2. Acceptable use', [
           'Give feedback only to people in your contacts or mutual connections '
@@ -176,8 +176,8 @@ class TermsScreen extends StatelessWidget {
         ]),
         _Section('6. Disclaimer and liability', [
           'Feedback reflects the subjective opinions of individual reviewers, '
-              'not statements of fact by The Wall. To the extent permitted by '
-              'law, The Wall is not liable for user-generated content.',
+              'not statements of fact by Known. To the extent permitted by '
+              'law, Known is not liable for user-generated content.',
         ]),
         _Section('7. Governing law', [
           'These terms are governed by the laws of India. Disputes are subject '

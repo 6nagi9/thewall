@@ -268,6 +268,23 @@ class WallRepository {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
+  // ---- In-app feedback / suggestions to the team ----
+
+  Future<void> submitAppFeedback({
+    required String category,
+    required String message,
+    String? contact,
+    String? appVersion,
+    String? platform,
+  }) =>
+      _fns.httpsCallable('submitAppFeedback').call({
+        'category': category,
+        'message': message,
+        'contact': contact,
+        'appVersion': appVersion,
+        'platform': platform,
+      }).then((_) {});
+
   // ---- Self-assessment (client-writable per rules) ----
 
   Future<void> saveSelfScores(Map<String, int> scores) async {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────
-/// The Wall — "Clay & Ink" design system.
+/// Known — "Clay & Ink" design system.
 ///
 /// A warm gallery-dark foundation (ink) with a terracotta signature (clay):
 /// every piece of feedback is a brick laid on your wall. Gold marks premium,

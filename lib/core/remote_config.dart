@@ -13,12 +13,27 @@ class RemoteConfigKeys {
   static const campaignTemplate = 'campaign_template';
   static const feedbackFridayEnabled = 'feedback_friday_enabled';
 
+  // ── Production safeguards (no app release needed to flip) ──────────────
+  /// Builds below this are forced to update (compared to build number).
+  static const minSupportedBuild = 'min_supported_build';
+
+  /// Hard kill-switch: when true, the whole app shows a maintenance screen.
+  static const maintenanceMode = 'maintenance_mode';
+  static const maintenanceMessage = 'maintenance_message';
+  static const updateMessage = 'update_message';
+
   static const defaults = <String, dynamic>{
     inviteTemplate:
-        '{name} said {count} things about you on The Wall 👀 — unlock them: {link}',
+        '{name} said {count} things about you on Known 👀 — unlock them: {link}',
     campaignTemplate:
         "I'd love your honest feedback — it takes 2 minutes and you can stay anonymous: {link}",
     feedbackFridayEnabled: true,
+    minSupportedBuild: 0,
+    maintenanceMode: false,
+    maintenanceMessage:
+        'Known is down for quick maintenance. Please check back shortly.',
+    updateMessage:
+        'A new version of Known is available with improvements and fixes.',
   };
 }
 

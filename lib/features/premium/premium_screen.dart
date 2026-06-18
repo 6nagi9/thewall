@@ -274,7 +274,7 @@ class _ActiveBanner extends StatelessWidget {
                 style: AppTheme.display(size: 24)),
             const SizedBox(height: 8),
             Text(
-              'All features unlocked. Thank you for supporting The Wall.',
+              'All features unlocked. Thank you for supporting Known.',
               textAlign: TextAlign.center,
               style: AppTheme.body(
                   size: 14, color: AppTheme.ink300, height: 1.5),

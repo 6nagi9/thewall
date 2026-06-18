@@ -4,7 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../core/theme.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────
-/// Shared UI kit for The Wall — "Clay & Ink".
+/// Shared UI kit for Known — "Clay & Ink".
 /// Cards, press feedback, the brick mark, brick progress, rating bricks,
 /// chips, entrance animations. Keep every screen on this vocabulary.
 /// ─────────────────────────────────────────────────────────────────────────

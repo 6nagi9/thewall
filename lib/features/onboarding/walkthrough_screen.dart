@@ -89,7 +89,7 @@ class _WalkthroughScreenState extends ConsumerState<WalkthroughScreen> {
                 children: [
                   const BrickMark(size: 30, animate: false),
                   const SizedBox(width: 10),
-                  Text('The Wall', style: AppTheme.display(size: 17)),
+                  Text('Known', style: AppTheme.display(size: 17)),
                   const Spacer(),
                   TextButton(
                     onPressed: _finish,

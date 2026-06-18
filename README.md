@@ -1,4 +1,4 @@
-# The Wall
+# Known
 
 A consent-first interpersonal feedback & reputation app. You **claim your own
 wall**, invite people to give *you* structured feedback, and control exactly
@@ -6,7 +6,7 @@ what you disclose publicly. Built to be legally shippable in India — DPDP Act
 2023, TRAI TCCCPR, and App Store / Play UGC compliant.
 
 > **Why consent-first?** The original concept (rate non-consenting people from a
-> phone number, then SMS-blast them) is unlawful under DPDP and TRAI. The Wall
+> phone number, then SMS-blast them) is unlawful under DPDP and TRAI. Known
 > redesigns the viral loop so no data about a person is processed until they
 > join and consent. See `COMPLIANCE.md` / `SRS.md` for the full mapping.
 

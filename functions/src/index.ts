@@ -81,7 +81,7 @@ async function sendPush(
 async function awardBadgeWithPush(uid: string, badgeId: string): Promise<void> {
   const awarded = await awardBadgeIfNeeded(db, uid, badgeId);
   if (awarded) {
-    await sendPush(uid, "Badge earned 🏆", "You earned a new badge on The Wall.", {
+    await sendPush(uid, "Badge earned 🏆", "You earned a new badge on Known.", {
       type: "badge_earned",
       badgeId,
     });
@@ -204,7 +204,7 @@ export const submitReview = onCall(
 
   await sendPush(
     targetUid,
-    "New feedback on The Wall",
+    "New feedback on Known",
     `${authorName || "Someone"} gave you feedback.`,
     { type: "new_feedback" }
   );
@@ -221,7 +221,7 @@ export const submitReview = onCall(
       await sendPush(
         targetUid,
         "Your feedback request worked",
-        "Someone answered your feedback campaign on The Wall.",
+        "Someone answered your feedback campaign on Known.",
         { type: "campaign_response", campaignId }
       );
     }
@@ -324,7 +324,7 @@ export const onUserJoin = onCall(async (req) => {
     await sendPush(
       uid,
       "You have feedback waiting!",
-      `${released} piece${released > 1 ? "s" : ""} of feedback unlocked on The Wall.`,
+      `${released} piece${released > 1 ? "s" : ""} of feedback unlocked on Known.`,
       { type: "feedback_released" }
     );
   }
@@ -351,7 +351,7 @@ export const onUserJoin = onCall(async (req) => {
       await sendPush(
         inviterUid,
         "Your invite worked 🎉",
-        "Someone you invited joined The Wall — you earned 7 days of Premium.",
+        "Someone you invited joined Known — you earned 7 days of Premium.",
         { type: "invite_joined" }
       );
     } catch (err) {
@@ -443,6 +443,61 @@ export const reportContent = onCall(async (req) => {
     feedbackId,
     byUid: uid,
     reason: reason || "unspecified",
+    state: "open",
+    createdAt: FieldValue.serverTimestamp(),
+  });
+  return { ok: true };
+});
+
+// ─── submitAppFeedback (in-app feedback / suggestions to the team) ────────────
+
+/**
+ * User-to-team feedback: suggestions, bug reports, praise. Distinct from the
+ * peer-feedback core. Stored in `appFeedback` for the team to triage; the
+ * client attaches app version + platform so reports are actionable.
+ */
+export const submitAppFeedback = onCall(async (req) => {
+  const uid = requireAuth(req.auth);
+  const {
+    category = "suggestion",
+    message,
+    contact = null,
+    appVersion = null,
+    platform = null,
+  } = req.data || {};
+
+  const text = typeof message === "string" ? message.trim() : "";
+  if (text.length < 3) {
+    throw new HttpsError("invalid-argument", "Please add a little more detail.");
+  }
+  if (text.length > 2000) {
+    throw new HttpsError("invalid-argument", "Message is too long.");
+  }
+  const allowed = ["suggestion", "bug", "praise", "other"];
+  const cat = allowed.includes(category) ? category : "other";
+
+  // Lightweight per-user rate limit: max 5 submissions per rolling hour.
+  const since = Timestamp.fromMillis(Date.now() - 3600_000);
+  const recent = await db
+    .collection("appFeedback")
+    .where("uid", "==", uid)
+    .where("createdAt", ">=", since)
+    .count()
+    .get();
+  if ((recent.data().count || 0) >= 5) {
+    throw new HttpsError(
+      "resource-exhausted",
+      "Thanks! You've sent a lot just now — try again in a bit."
+    );
+  }
+
+  await db.collection("appFeedback").add({
+    uid,
+    category: cat,
+    message: text.substring(0, 2000),
+    contact: typeof contact === "string" ? contact.substring(0, 120) : null,
+    appVersion: typeof appVersion === "string" ? appVersion.substring(0, 40) : null,
+    platform: typeof platform === "string" ? platform.substring(0, 20) : null,
     state: "open",
     createdAt: FieldValue.serverTimestamp(),
   });
@@ -1135,7 +1190,7 @@ export const generateAiSummary = onCall(
         {
           role: "user",
           content:
-            "You are the insight engine of The Wall, a consent-first feedback app. " +
+            "You are the insight engine of Known, a consent-first feedback app. " +
             "Below is structured feedback this user received from people who know them " +
             "(dimensions are 1-5 ratings; growth tags are constructive). Write the JSON " +
             "summary and growth plan. Be specific, kind, and honest; never invent facts " +
@@ -1199,7 +1254,7 @@ function wallPage(d: Record<string, unknown> | null): string {
     String(s ?? "").replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string)
     );
-  const name = d ? esc(d.displayName) : "The Wall";
+  const name = d ? esc(d.displayName) : "Known";
   const tagCounts = (d?.tagCounts as Record<string, number>) || {};
   const topTags = Object.entries(tagCounts)
     .sort((a, b) => b[1] - a[1])
@@ -1208,7 +1263,7 @@ function wallPage(d: Record<string, unknown> | null): string {
     .join("");
   const openness = d ? esc(d.opennessLabel || "New") : "";
   const count = d ? Number(d.reviewCount || 0) : 0;
-  const title = d ? `${name} on The Wall` : "Wall not found";
+  const title = d ? `${name} on Known` : "Wall not found";
   const desc = d
     ? `${count} people have laid bricks on ${name}'s wall · ${openness}`
     : "This wall is private or was unpublished.";
@@ -1220,7 +1275,7 @@ function wallPage(d: Record<string, unknown> | null): string {
     : `<h1>This wall is private</h1>
        <p class="sub">The owner hasn't published it — or took it down. That's how
        consent works here.</p>
-       <a class="cta" href="${WEB_BASE}">What is The Wall? →</a>`;
+       <a class="cta" href="${WEB_BASE}">What is Known? →</a>`;
   return `<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
@@ -1303,7 +1358,7 @@ export const weeklyDigest = onSchedule(
         const n = recent.size;
         await sendPush(
           u.id,
-          "Your week on The Wall",
+          "Your week on Known",
           `${n} new piece${n > 1 ? "s" : ""} of feedback this week. See what changed.`,
           { type: "weekly_digest" }
         );

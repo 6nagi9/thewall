@@ -55,6 +55,14 @@
         { "fieldPath": "leaderboardOptIn", "order": "ASCENDING" },
         { "fieldPath": "opennessScore", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "appFeedback",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

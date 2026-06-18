@@ -13,6 +13,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/app_gate.dart';
 import 'core/prefs.dart';
 import 'core/remote_config.dart';
 import 'core/theme.dart';
@@ -189,12 +190,14 @@ class WallApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
-      title: 'The Wall',
+      title: 'Known',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: scaffoldMessengerKey,
       theme: AppTheme.dark,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      // Whole-app maintenance / forced-update gate (Remote Config driven).
+      builder: (context, child) => AppGate(child: child ?? const SizedBox()),
       routerConfig: router,
     );
   }

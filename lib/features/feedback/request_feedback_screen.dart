@@ -108,7 +108,7 @@ class _RequestFeedbackScreenState
               OutlinedButton.icon(
                 onPressed: () async {
                   Navigator.pop(sheetCtx);
-                  await shareText(msg, subject: 'Feedback request — The Wall');
+                  await shareText(msg, subject: 'Feedback request — Known');
                 },
                 icon: const Icon(Icons.ios_share_rounded, size: 19),
                 label: const Text('More options'),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_review.dart';
 import '../../core/constants.dart';
 import '../../core/moderation.dart';
 import '../../core/phone_hash.dart';
@@ -346,6 +347,9 @@ class _ComposeFeedbackScreenState extends ConsumerState<ComposeFeedbackScreen> {
       transitionBuilder: (context, anim, secondary, child) =>
           FadeTransition(opacity: anim, child: child),
     );
+    // Laying a brick is a genuine positive moment — a good (throttled) time to
+    // ask for a store review. The helper enforces frequency/interval caps.
+    if (mounted) await ref.read(appReviewProvider).maybeAsk(ref);
     if (mounted) Navigator.pop(context);
   }
 
@@ -383,7 +387,7 @@ class _ComposeFeedbackScreenState extends ConsumerState<ComposeFeedbackScreen> {
                   style: AppTheme.display(size: 20)),
               const SizedBox(height: 8),
               Text(
-                '${widget.targetName} isn\'t on The Wall yet. It unlocks the '
+                '${widget.targetName} isn\'t on Known yet. It unlocks the '
                 'moment they join — send them the link:',
                 style: AppTheme.body(
                     size: 13.5, color: AppTheme.ink300, height: 1.5),
@@ -401,7 +405,7 @@ class _ComposeFeedbackScreenState extends ConsumerState<ComposeFeedbackScreen> {
               OutlinedButton.icon(
                 onPressed: () async {
                   Navigator.pop(sheetCtx);
-                  await shareText(text, subject: 'The Wall');
+                  await shareText(text, subject: 'Known');
                 },
                 icon: const Icon(Icons.ios_share_rounded, size: 19),
                 label: const Text('More options'),

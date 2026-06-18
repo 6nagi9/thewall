@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +13,7 @@ import '../../shared/wall_ui.dart';
 import '../gamification/badges_screen.dart';
 import '../gamification/wrapped_screen.dart';
 import '../feedback/request_feedback_screen.dart';
+import '../feedback_to_us/feedback_to_us_screen.dart';
 import '../premium/premium_screen.dart';
 import '../self_assessment/self_assessment_screen.dart';
 
@@ -127,7 +129,7 @@ class MyWallScreen extends ConsumerWidget {
                                     weight: FontWeight.w600,
                                     color: AppTheme.paper)),
                             Text(
-                                'Share a link — anyone on The Wall can answer.',
+                                'Share a link — anyone on Known can answer.',
                                 style: AppTheme.body(
                                     size: 12, color: AppTheme.ink400)),
                           ],
@@ -277,7 +279,21 @@ class _Header extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const BrickMark(size: 40),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _HeaderIconButton(
+                    icon: Icons.campaign_outlined,
+                    tooltip: 'Send feedback',
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const FeedbackToUsScreen())),
+                  ),
+                  const SizedBox(width: 10),
+                  const BrickMark(size: 40),
+                ],
+              ),
               const SizedBox(height: 8),
               _OpennessBadge(label: opennessLabel),
             ],
@@ -286,6 +302,40 @@ class _Header extends StatelessWidget {
       ),
     ).entrance(0);
   }
+}
+
+/// Small circular icon button used in screen headers (Clay & Ink styling).
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  const _HeaderIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tooltip,
+        child: Pressable(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          pressedScale: 0.9,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppTheme.ink850,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: AppTheme.ink700),
+            ),
+            child: Icon(icon, size: 20, color: AppTheme.clay),
+          ),
+        ),
+      );
 }
 
 // ─── Gate progress (progressive reveal) ──────────────────────────────────────

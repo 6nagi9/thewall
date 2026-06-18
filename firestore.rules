@@ -72,6 +72,10 @@ service cloud.firestore {
     // Payment ledger: Functions only.
     match /ledger/{id} { allow read, write: if false; }
 
+    // In-app feedback / suggestions to the team: written via the
+    // submitAppFeedback Function only; never client-readable.
+    match /appFeedback/{id} { allow read, write: if false; }
+
     // Circles: visible only to members (membership checked via the member
     // doc). All writes go through Cloud Functions (create/join/leave).
     match /circles/{circleId} {

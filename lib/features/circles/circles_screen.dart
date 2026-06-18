@@ -125,7 +125,7 @@ class CirclesTab extends ConsumerWidget {
                 final code = res['code'] as String? ?? '';
                 final link = res['link'] as String? ?? K.webBase;
                 await shareViaWhatsApp(
-                    'Join my circle "$name" on The Wall — code $code or tap: $link');
+                    'Join my circle "$name" on Known — code $code or tap: $link');
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context)
@@ -240,7 +240,7 @@ class CircleDetailScreen extends ConsumerWidget {
                 ),
                 ElevatedButton.icon(
                   onPressed: () => shareViaWhatsApp(renderTemplate(
-                    'Join my circle "${circle.name}" on The Wall — code ${circle.code} or tap: {link}',
+                    'Join my circle "${circle.name}" on Known — code ${circle.code} or tap: {link}',
                     link: '${K.webBase}/c/${circle.code}',
                   )),
                   icon: const Icon(Icons.ios_share_rounded, size: 17),

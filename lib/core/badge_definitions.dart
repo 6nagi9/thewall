@@ -69,7 +69,7 @@ const kBadges = <BadgeDef>[
   BadgeDef(
     id: 'streak_7',
     label: '7-Day Streak',
-    description: 'Stayed active on The Wall 7 days in a row.',
+    description: 'Stayed active on Known 7 days in a row.',
     icon: Icons.local_fire_department_outlined,
     color: AppTheme.flame,
   ),

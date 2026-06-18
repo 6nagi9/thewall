@@ -9,7 +9,7 @@
 /// emotional/viral loops; professional contexts power usefulness + B2B.
 /// Keep in sync with the server mirror in `functions/src/util.ts`.
 class K {
-  static const String appName = 'The Wall';
+  static const String appName = 'Known';
 
   /// Public web base for invite / campaign / circle / wall links.
   /// Served by Firebase Hosting; swap for thewall.app once configured.

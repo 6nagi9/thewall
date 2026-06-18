@@ -28,6 +28,22 @@ class Analytics {
   Future<void> purchaseCompleted(String productId) =>
       log('purchase_completed', {'product_id': productId});
   Future<void> campaignCreated() => log('campaign_created');
+
+  // ── Growth + product surfaces ────────────────────────────────────────
+  Future<void> inviteShared(String channel) =>
+      log('invite_shared', {'channel': channel});
+  Future<void> circleCreated() => log('circle_created');
+  Future<void> circleJoined() => log('circle_joined');
+  Future<void> wrappedShared() => log('wrapped_shared');
+  Future<void> wallPublished(bool published) =>
+      log('wall_published', {'published': published.toString()});
+  Future<void> aiSummaryGenerated() => log('ai_summary_generated');
+  Future<void> selfAssessmentSaved() => log('self_assessment_saved');
+
+  /// In-app feedback to the team (suggestion / bug / praise / other).
+  Future<void> appFeedbackSent(String category) =>
+      log('app_feedback_sent', {'category': category});
+  Future<void> appReviewRequested() => log('app_review_requested');
 }
 
 final appAnalyticsProvider =
