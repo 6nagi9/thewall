@@ -159,7 +159,7 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'the-wall-app-260609.web.app',
+                    'known.udgamai.com',
                     style: AppTheme.body(
                         size: 11.5, color: AppTheme.ink400),
                   ),

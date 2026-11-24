@@ -36,6 +36,8 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https"
+                      android:host="known.udgamai.com"/>
+                <data android:scheme="https"
                       android:host="the-wall-app-260609.web.app"/>
                 <data android:pathPrefix="/i/"/>
                 <data android:pathPrefix="/r/"/>

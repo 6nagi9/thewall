@@ -69,7 +69,7 @@ class _LegalScaffold extends StatelessWidget {
                 ).entrance((entry.key + 2).clamp(0, 8)),
               )),
           const SizedBox(height: 32),
-          Text('Grievance Officer: grievance@thewall.app · 7-day response',
+          Text('Grievance Officer: contact@udgamai.com · 7-day response',
               style: AppTheme.body(size: 12, color: AppTheme.ink400)),
           const SizedBox(height: 24),
         ],

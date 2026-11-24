@@ -263,9 +263,9 @@ class SettingsScreen extends ConsumerWidget {
               _SettingsTile(
                 icon: Icons.support_agent_outlined,
                 title: 'Grievance officer',
-                subtitle: 'grievance@thewall.app · 7-day response',
+                subtitle: 'contact@udgamai.com · 7-day response',
                 onTap: () =>
-                    _snack(context, 'Contact: grievance@thewall.app'),
+                    _snack(context, 'Contact: contact@udgamai.com'),
               ),
             ]).entrance(++i),
             const SizedBox(height: 24),

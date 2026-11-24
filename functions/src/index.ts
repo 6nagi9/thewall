@@ -40,8 +40,8 @@ const androidPackage = defineString("ANDROID_PACKAGE", {
 });
 
 // Public web base for invite / campaign / circle / wall links. Served by
-// Firebase Hosting; swap for a custom domain (thewall.app) once configured.
-const WEB_BASE = "https://the-wall-app-260609.web.app";
+// Known's home under the UdgamAI brand (Firebase Hosting custom domain).
+const WEB_BASE = "https://known.udgamai.com";
 
 initializeApp();
 const db = getFirestore();

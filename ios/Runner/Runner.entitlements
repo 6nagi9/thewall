@@ -4,9 +4,10 @@
 <dict>
 	<!-- Universal Links for invite / campaign / circle deep links. The
 	     matching apple-app-site-association lives in marketing/.well-known/
-	     (update TEAMID there before release). -->
+	     (team 4Q33B3AAAU). -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
+		<string>applinks:known.udgamai.com</string>
 		<string>applinks:the-wall-app-260609.web.app</string>
 	</array>
 </dict>

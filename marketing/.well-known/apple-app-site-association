@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "TEAMID.com.thewall.wall",
+        "appID": "4Q33B3AAAU.com.thewall.wall",
         "paths": ["/i/*", "/r/*", "/c/*"]
       }
     ]

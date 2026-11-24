@@ -12,8 +12,8 @@ class K {
   static const String appName = 'Known';
 
   /// Public web base for invite / campaign / circle / wall links.
-  /// Served by Firebase Hosting; swap for thewall.app once configured.
-  static const String webBase = 'https://the-wall-app-260609.web.app';
+  /// Known's home under the UdgamAI brand (Firebase Hosting custom domain).
+  static const String webBase = 'https://known.udgamai.com';
 
   /// Give-to-get: number of feedback "units" to clear the FULL gate
   /// (aggregates + viewing other walls). Individual received items unlock

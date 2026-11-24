@@ -1,11 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.thewall.wall",
       "sha256_cert_fingerprints": [
-        "14:C6:14:64:E1:B8:F8:CA:E7:99:DA:A7:E4:6F:75:A8:3E:5C:77:ED:91:F6:4B:FF:55:E5:FC:F5:39:30:06:8E"
+        "14:C6:14:64:E1:B8:F8:CA:E7:99:DA:A7:E4:6F:75:A8:3E:5C:77:ED:91:F6:4B:FF:55:E5:FC:F5:39:30:06:8E",
+        "96:1F:CE:62:8F:5D:F5:C0:CB:4B:57:62:35:0D:A9:E9:15:44:E8:91:E0:8E:EB:59:45:64:28:33:EF:50:7C:A8"
       ]
     }
   }
