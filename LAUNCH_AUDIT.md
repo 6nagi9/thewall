@@ -82,3 +82,34 @@ traffic everything above stays in the free quotas once the full scans are fixed.
 4. Release signing, iOS team, app-link files, App Store Server API verification.
 5. Store pipeline (port Bellboa's fastlane + workflow), listing, privacy labels,
    IAP products, then submit.
+
+## Progress 2026-11-24 (commit e13855a)
+
+Done and deployed: the three scheduled-job cost fixes; Functions on Node 22 (all
+30); dormant-number re-verification wired end to end (new `clearReverify`); iOS
+team 4Q33B3AAAU; Android release signing (upload key in
+~/Documents/app-stores-pipeline-files/known).
+
+## Growth: the consent-first viral loop (decided with the owner)
+
+No processing of non-members' data and no server SMS (DPDP/TRAI and store
+policy). Growth comes from users sharing their *own* link, NGL/Sarahah-style:
+
+1. **Answer on the web, no install.** Today `respond.html` has no form: a
+   responder must install the app and verify an OTP before answering, which kills
+   the loop. Build a web response form for campaign links (`/r/{id}`): sliders +
+   tags + moderated comment, rate-limited and App Check/reCAPTCHA-protected,
+   counted as "web responses" (lower weight in anti-abuse, min-N gating unchanged).
+2. **The hook after answering:** "Now see what people think of you" → get your own
+   link (app install or web sign-up).
+3. **Story/WhatsApp share cards** of the owner's results (image + link) so the
+   wall itself is the ad.
+4. Referral premium days already exist (`premiumUntil`); surface them at share time.
+
+## Still open
+
+- Identity: name/domain/permanent IDs (owner decision; research next).
+- SRS + COMPLIANCE docs rewrite.
+- Web response form + share cards (above).
+- APPLE_SHARED_SECRET / App Store Server API, IAP products, store pipeline, listing.
+- Repo `6nagi9/thewall` is **public**; make it private before launch.
