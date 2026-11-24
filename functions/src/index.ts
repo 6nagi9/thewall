@@ -1299,8 +1299,21 @@ function wallPage(d: Record<string, unknown> | null): string {
 
 // ─── Scheduled: recompute aggregates nightly ─────────────────────────────────
 
+/**
+ * Keeps time-decayed aggregates fresh without scanning every wall.
+ * Every review write already recomputes its wall immediately; this job only
+ * refreshes walls whose aggregate is older than a week (decay moves weights
+ * ~0.5%/day at λ=0.005), oldest first, bounded per run. Cost: ≤200 walls/day
+ * plus their reviews, regardless of how large the network grows.
+ */
 export const recomputeAggregates = onSchedule("every 24 hours", async () => {
-  const walls = await db.collection("walls").get();
+  const staleBefore = Timestamp.fromMillis(Date.now() - 7 * 86_400_000);
+  const walls = await db
+    .collection("walls")
+    .where("updatedAt", "<", staleBefore)
+    .orderBy("updatedAt")
+    .limit(200)
+    .get();
   for (const w of walls.docs) {
     await recomputeWall(w.id);
   }
@@ -1343,27 +1356,29 @@ export const streakReminder = onSchedule(
 export const weeklyDigest = onSchedule(
   { schedule: "every monday 10:00", timeZone: "Asia/Kolkata" },
   async () => {
+    // Start from the week's new feedback (collection-group query on inbox),
+    // not from the user list: cost scales with activity, not with sign-ups,
+    // and nobody past the first N users is skipped.
     const weekAgo = Timestamp.fromMillis(Date.now() - 7 * 86_400_000);
-    const users = await db.collection("users").limit(500).get();
-    for (const u of users.docs) {
+    const recent = await db
+      .collectionGroup("inbox")
+      .where("createdAt", ">=", weekAgo)
+      .get();
+    const perUser = new Map<string, number>();
+    for (const d of recent.docs) {
+      const uid = d.ref.parent.parent?.id;
+      if (uid) perUser.set(uid, (perUser.get(uid) || 0) + 1);
+    }
+    for (const [uid, n] of perUser) {
       try {
-        if (!u.get("fcmToken")) continue;
-        const recent = await db
-          .collection("users")
-          .doc(u.id)
-          .collection("inbox")
-          .where("createdAt", ">=", weekAgo)
-          .get();
-        if (recent.empty) continue;
-        const n = recent.size;
         await sendPush(
-          u.id,
+          uid,
           "Your week on Known",
           `${n} new piece${n > 1 ? "s" : ""} of feedback this week. See what changed.`,
           { type: "weekly_digest" }
         );
       } catch (err) {
-        console.debug("Digest skipped for", u.id, err);
+        console.debug("Digest skipped for", uid, err);
       }
     }
   }
@@ -1447,17 +1462,36 @@ export const antiAbuseSweep = onSchedule("every 6 hours", async () => {
  * recycled number from inheriting the previous owner's Wall.
  */
 export const reverifyNumber = onSchedule("every 24 hours", async () => {
-  const cutoff = Timestamp.fromMillis(Date.now() - 180 * 86_400_000);
+  // Only accounts that crossed the 180-day line since the last run (2-day
+  // window for safety): each dormant account is flagged once, never rewritten
+  // daily, and there is no fixed cap that strands everyone past user 500.
+  const day = 86_400_000;
+  const cutoff = Timestamp.fromMillis(Date.now() - 180 * day);
+  const windowStart = Timestamp.fromMillis(Date.now() - 182 * day);
   const stale = await db
     .collection("gamification")
+    .where("streak.lastActivityAt", ">=", windowStart)
     .where("streak.lastActivityAt", "<", cutoff)
-    .limit(500)
     .get();
   await Promise.all(
     stale.docs.map((d) =>
       db.collection("users").doc(d.id).set({ needsReverify: true }, { merge: true })
     )
   );
+});
+
+/**
+ * Clears `needsReverify` (see reverifyNumber), but only when the caller signed
+ * in with a fresh OTP in the last 10 minutes; a stale session can't clear it.
+ */
+export const clearReverify = onCall(async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const authTime = Number(req.auth.token.auth_time || 0) * 1000;
+  if (Date.now() - authTime > 10 * 60_000) {
+    throw new HttpsError("failed-precondition", "Verify your number again.");
+  }
+  await db.collection("users").doc(req.auth.uid).set({ needsReverify: false }, { merge: true });
+  return { ok: true };
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

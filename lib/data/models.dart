@@ -17,6 +17,10 @@ class AppUser {
   final Map<String, int> selfScores; // self-assessment, dimension key -> 1..5
   final DateTime? dataAccessGrantedAt;
 
+  /// Set by the server after 180 days of dormancy (Indian numbers get
+  /// recycled): the app forces a fresh OTP before showing this account.
+  final bool needsReverify;
+
   AppUser({
     required this.uid,
     required this.phoneHash,
@@ -32,6 +36,7 @@ class AppUser {
     this.publicSlug,
     this.selfScores = const {},
     this.dataAccessGrantedAt,
+    this.needsReverify = false,
   });
 
   /// Full gate (aggregates + viewing other walls). Individual received items
@@ -63,6 +68,7 @@ class AppUser {
           ) ??
           const {},
       dataAccessGrantedAt: (d['dataAccessGrantedAt'] as Timestamp?)?.toDate(),
+      needsReverify: d['needsReverify'] == true,
     );
   }
 

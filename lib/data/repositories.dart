@@ -297,6 +297,11 @@ class WallRepository {
 
   // ---- Gamification ----
 
+  /// Clears the dormant-number flag; the server only accepts it right after
+  /// a fresh OTP sign-in.
+  Future<void> clearReverify() =>
+      _fns.httpsCallable('clearReverify').call().then((_) {});
+
   Future<void> setLeaderboardOptIn(bool optIn) =>
       _fns.httpsCallable('setLeaderboardOptIn').call({'optIn': optIn}).then((_) {});
 

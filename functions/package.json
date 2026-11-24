@@ -2,7 +2,7 @@
   "name": "the-wall-functions",
   "description": "Cloud Functions for The Wall — consent-first reputation app",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "lib/index.js",
   "scripts": {

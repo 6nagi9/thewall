@@ -4,66 +4,133 @@
       "collectionGroup": "reviews",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "targetPhoneHash", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
+        {
+          "fieldPath": "targetPhoneHash",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "reviews",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "targetPhoneHash", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
+        {
+          "fieldPath": "targetPhoneHash",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "feedbackRequests",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "ownerUid", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "ownerUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "feedbackRequests",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "ownerUid", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
+        {
+          "fieldPath": "ownerUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "gamification",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "leaderboardOptIn", "order": "ASCENDING" },
-        { "fieldPath": "contributionPoints", "order": "DESCENDING" }
+        {
+          "fieldPath": "leaderboardOptIn",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "contributionPoints",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "gamification",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "leaderboardOptIn", "order": "ASCENDING" },
-        { "fieldPath": "growthScore", "order": "DESCENDING" }
+        {
+          "fieldPath": "leaderboardOptIn",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "growthScore",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "gamification",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "leaderboardOptIn", "order": "ASCENDING" },
-        { "fieldPath": "opennessScore", "order": "DESCENDING" }
+        {
+          "fieldPath": "leaderboardOptIn",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "opennessScore",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "appFeedback",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "inbox",
+      "fieldPath": "createdAt",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    }
+  ]
 }

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,6 +66,21 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Signed in but profile/consent not complete -> onboarding.
       final user = ref.read(appUserProvider).value;
+
+      // Dormant 180+ days: the number may have been recycled to someone
+      // else. Require a fresh OTP before showing this account's wall.
+      if (user != null && user.needsReverify) {
+        final last = authAsync.value!.metadata.lastSignInTime;
+        final fresh = last != null &&
+            DateTime.now().difference(last) < const Duration(minutes: 10);
+        if (fresh) {
+          unawaited(ref.read(repoProvider).clearReverify());
+        } else {
+          unawaited(FirebaseAuth.instance.signOut());
+          return '/login?reverify=1';
+        }
+      }
+
       final onboarded = user?.onboarded ?? false;
       if (!onboarded) {
         if (_isDeepLink(loc)) {

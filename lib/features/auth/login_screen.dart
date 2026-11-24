@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../shared/wall_ui.dart';
@@ -137,6 +138,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   .fadeIn(delay: 350.ms, duration: WallMotion.slow)
                   .slideY(begin: 0.15, end: 0, delay: 350.ms),
               const SizedBox(height: 8),
+              if (GoRouterState.of(context).uri.queryParameters['reverify'] == '1')
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'It has been a while. For your security, please verify your number again.',
+                    style: AppTheme.body(size: 14, color: AppTheme.ink300),
+                  ),
+                ),
               Text(
                 'Honest feedback, brick by brick —\non your terms.',
                 style: AppTheme.body(
