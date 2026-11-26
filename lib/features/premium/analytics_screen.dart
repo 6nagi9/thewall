@@ -232,7 +232,7 @@ class _SummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${DateFormat("d MMM yy").format(first)} → '
+            '${DateFormat("d MMM yy").format(first)} – '
             '${DateFormat("d MMM yy").format(last)}',
             style: AppTheme.body(size: 12, color: AppTheme.ink400),
           ),

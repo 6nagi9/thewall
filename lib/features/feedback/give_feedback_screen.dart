@@ -165,6 +165,10 @@ class _GiveFeedbackScreenState extends ConsumerState<GiveFeedbackScreen> {
                       SizedBox(
                         height: 56,
                         child: OutlinedButton.icon(
+                          // The theme's minimumSize is full-width; inside a
+                          // Row that is an infinite width, so size to content.
+                          style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 56)),
                           onPressed: _pickFromContacts,
                           icon: const Icon(Icons.contacts_outlined,
                               size: 18),

@@ -93,7 +93,9 @@ class WallCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: borderColor ?? AppTheme.ink700),
       ),
-      child: child,
+      // Tiles inside a card paint their ink on this transparent Material,
+      // not on the page behind the card's background (where it is hidden).
+      child: Material(type: MaterialType.transparency, child: child),
     );
     return Pressable(onTap: onTap, child: card);
   }
