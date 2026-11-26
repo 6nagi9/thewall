@@ -1,0 +1,9 @@
+Purpose: Known lets adults (18+) invite people who know them to give structured, honest feedback (ratings on fixed dimensions, curated tags, a short moderated comment). Nothing about a person is shown to others until they choose to disclose it.
+
+Sign-in: phone number + one-time code. The demo account in the Sign-In fields is a test number: no SMS is sent and the code always works. After the code, accept the consent and 18+ screens. The demo account already has Premium (Trends and the AI summary are unlocked), so no purchase is needed to review paid features.
+
+User-generated content: on My Wall, the flag on any received feedback offers Dispute, Report (reasons include child safety; the item is hidden at once) and Block (that person can no longer give you feedback). Settings > Blocked people shows the count and can unblock. Account deletion: Settings > Delete account & data (immediate).
+
+Services: Firebase (authentication, database, cloud functions, push, crash reports, analytics) hosted in India; an AI model provider generates the Premium summary and moderates comments. Payments use Apple In-App Purchase only.
+
+Regions: works the same in all regions (English).
