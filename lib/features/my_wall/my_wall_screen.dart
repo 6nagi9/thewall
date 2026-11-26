@@ -243,6 +243,7 @@ class MyWallScreen extends ConsumerWidget {
   }
 
   static const _reportReasons = {
+    'child_safety': 'Involves a minor or child safety',
     'harassment': 'Harassment or bullying',
     'hate': 'Hate or discrimination',
     'sexual': 'Sexual content',
