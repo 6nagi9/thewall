@@ -113,3 +113,18 @@ policy). Growth comes from users sharing their *own* link, NGL/Sarahah-style:
 - Web response form + share cards (above).
 - APPLE_SHARED_SECRET / App Store Server API, IAP products, store pipeline, listing.
 - Repo `6nagi9/thewall` is **public**; make it private before launch.
+
+## Store status (2026-11-26)
+
+- Play app 4976290357971301512; production **draft** release 1.0.0 (3). Listing, graphics,
+  subscriptions (`wall_premium_monthly` ₹149, `wall_premium_yearly` ₹999) live.
+- App content: all declarations done except Sign in details (owner types the review
+  login), then Target audience (18+) and the final Data safety Save.
+- Store assets: `flutter test tool/screenshots/store_test.dart && python3 -I tool/make_store_assets.py`.
+- Scripts (outside the repo, `~/Documents/app-stores-pipeline-files/`): `play_release.sh`,
+  `play_listing.py`, `play_subs.py` (use the play-deploy service account by impersonation).
+- Android purchase verification: invite the functions service account
+  `102675326351-compute@developer.gserviceaccount.com` in Play Console with financial
+  permissions (owner).
+- iOS: bundle ID registered; App Store record not created yet (owner signs in to App Store
+  Connect); APNs key needed in Firebase for push.
