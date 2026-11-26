@@ -257,8 +257,8 @@ class SettingsScreen extends ConsumerWidget {
             _SettingsGroup(children: [
               _SettingsTile(
                 icon: Icons.block_outlined,
-                title: 'Blocked users',
-                onTap: () => _snack(context, 'No blocked users.'),
+                title: 'Blocked people',
+                onTap: () => _blocked(context, ref),
               ),
               _SettingsTile(
                 icon: Icons.support_agent_outlined,
@@ -471,6 +471,47 @@ class SettingsScreen extends ConsumerWidget {
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _blocked(BuildContext context, WidgetRef ref) async {
+    final repo = ref.read(repoProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    int count;
+    try {
+      count = await repo.blockedCount();
+    } catch (_) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Couldn\'t load. Try again.')));
+      return;
+    }
+    if (!context.mounted) return;
+    if (count == 0) {
+      _snack(context, 'You haven\'t blocked anyone.');
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(count == 1 ? '1 person blocked' : '$count people blocked'),
+        content: const Text(
+            'Blocked people can\'t give you feedback. Known never shows who '
+            'they are, so they can only be unblocked all together.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialog),
+              child: const Text('Close')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialog);
+              await repo.unblockAll();
+              messenger.showSnackBar(
+                  const SnackBar(content: Text('Unblocked everyone.')));
+            },
+            child: const Text('Unblock everyone'),
+          ),
         ],
       ),
     );

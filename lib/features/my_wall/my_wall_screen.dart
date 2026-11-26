@@ -189,7 +189,7 @@ class MyWallScreen extends ConsumerWidget {
                         onToggle: (v) => ref
                             .read(repoProvider)
                             .setDisclosure(f.id, v),
-                        onDispute: () => _dispute(context, ref, f.id),
+                        onDispute: () => _safety(context, ref, f.id),
                       ).entrance(++i),
                     );
                   }),
@@ -197,6 +197,123 @@ class MyWallScreen extends ConsumerWidget {
             );
           },
         ),
+      ),
+    );
+  }
+
+  /// The flag on a received item: dispute it, report it, or block the person.
+  void _safety(BuildContext context, WidgetRef ref, String id) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.ink850,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.flag_outlined),
+              title: const Text('Dispute: this isn\'t accurate'),
+              onTap: () {
+                Navigator.pop(sheet);
+                _dispute(context, ref, id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.report_outlined),
+              title: const Text('Report: abusive or inappropriate'),
+              onTap: () {
+                Navigator.pop(sheet);
+                _report(context, ref, id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.block_outlined),
+              title: const Text('Block this person'),
+              subtitle: const Text(
+                  'They can\'t give you feedback again. You still won\'t see who they are.'),
+              onTap: () {
+                Navigator.pop(sheet);
+                _block(context, ref, id);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static const _reportReasons = {
+    'harassment': 'Harassment or bullying',
+    'hate': 'Hate or discrimination',
+    'sexual': 'Sexual content',
+    'threat': 'Threats or violence',
+    'spam': 'Spam',
+    'other': 'Something else',
+  };
+
+  void _report(BuildContext context, WidgetRef ref, String id) {
+    showDialog<void>(
+      context: context,
+      builder: (dialog) => SimpleDialog(
+        title: const Text('Why are you reporting this?'),
+        children: [
+          for (final e in _reportReasons.entries)
+            SimpleDialogOption(
+              onPressed: () async {
+                Navigator.pop(dialog);
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  await ref.read(repoProvider).reportContent(id, e.key);
+                  messenger.showSnackBar(const SnackBar(
+                      content: Text(
+                          'Reported. It\'s hidden while our team reviews it.')));
+                } catch (_) {
+                  messenger.showSnackBar(const SnackBar(
+                      content: Text('Couldn\'t send the report. Try again.')));
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Text(e.value),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _block(BuildContext context, WidgetRef ref, String id) {
+    showDialog<void>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Block this person?'),
+        content: const Text(
+            'They won\'t be able to give you feedback again. You can unblock '
+            'everyone later in Settings.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialog),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(120, 48),
+              backgroundColor: AppTheme.rose,
+            ),
+            onPressed: () async {
+              Navigator.pop(dialog);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await ref.read(repoProvider).blockReviewer(id);
+                messenger.showSnackBar(
+                    const SnackBar(content: Text('Blocked.')));
+              } catch (_) {
+                messenger.showSnackBar(const SnackBar(
+                    content: Text('Couldn\'t block. Try again.')));
+              }
+            },
+            child: const Text('Block'),
+          ),
+        ],
       ),
     );
   }
@@ -1181,7 +1298,7 @@ class _FeedbackCard extends StatelessWidget {
                 onPressed: underReview ? null : onDispute,
                 icon: const Icon(Icons.flag_outlined, size: 20),
                 color: AppTheme.ink400,
-                tooltip: 'Dispute',
+                tooltip: 'Dispute, report or block',
               ),
             ],
           ),

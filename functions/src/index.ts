@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getFirestore, FieldPath, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
@@ -134,6 +134,11 @@ export const submitReview = onCall(
   if (!mod.ok) return { ok: false, reason: mod.reason };
 
   const rKey = reviewerKey(uid);
+  // Blocked from a received item (blockReviewer): keyed by the reviewer's
+  // one-way key, so the person who blocked never learns who it was.
+  if ((await db.collection("blocks").doc(`${targetPhoneHash}_k_${rKey}`).get()).exists) {
+    throw new HttpsError("permission-denied", "You can't review this person.");
+  }
   const dKey = dedupKey(uid, targetPhoneHash);
   const authorName = anonymous ? null : reviewerSnap.get("displayName") || null;
 
@@ -434,11 +439,72 @@ export const blockUser = onCall(async (req) => {
   return { ok: true };
 });
 
+// ─── blockReviewer / blockedCount / unblockAll ─────────────────────────────────
+
+/**
+ * Block whoever wrote one of my received items. Reviews carry only the
+ * reviewer's HMAC key, so the block is keyed by it: they can't write to me
+ * again, and I still never learn who they are.
+ */
+export const blockReviewer = onCall(async (req) => {
+  const uid = requireAuth(req.auth);
+  const { feedbackId } = req.data || {};
+  if (!feedbackId || typeof feedbackId !== "string") {
+    throw new HttpsError("invalid-argument", "feedbackId required.");
+  }
+  const myHash = (await db.collection("users").doc(uid).get()).get("phoneHash");
+  const review = await db.collection("reviews").doc(feedbackId).get();
+  if (!review.exists || review.get("targetPhoneHash") !== myHash) {
+    throw new HttpsError("not-found", "Feedback not found.");
+  }
+  await db.collection("blocks").doc(`${myHash}_k_${review.get("reviewerKeyHmac")}`).set({
+    createdAt: FieldValue.serverTimestamp(),
+  });
+  return { ok: true };
+});
+
+function myBlocksQuery(myHash: string) {
+  return db
+    .collection("blocks")
+    .orderBy(FieldPath.documentId())
+    .startAt(`${myHash}_`)
+    .endAt(`${myHash}_\uf8ff`);
+}
+
+export const blockedCount = onCall(async (req) => {
+  const uid = requireAuth(req.auth);
+  const myHash = (await db.collection("users").doc(uid).get()).get("phoneHash");
+  const agg = await myBlocksQuery(myHash).count().get();
+  return { count: agg.data().count };
+});
+
+export const unblockAll = onCall(async (req) => {
+  const uid = requireAuth(req.auth);
+  const myHash = (await db.collection("users").doc(uid).get()).get("phoneHash");
+  const snap = await myBlocksQuery(myHash).limit(500).get();
+  const batch = db.batch();
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  return { ok: true, removed: snap.size };
+});
+
 // ─── reportContent ────────────────────────────────────────────────────────────
 
+/** Report a received item as abusive: hidden at once, queued for moderation. */
 export const reportContent = onCall(async (req) => {
   const uid = requireAuth(req.auth);
   const { feedbackId, reason } = req.data || {};
+  if (!feedbackId || typeof feedbackId !== "string") {
+    throw new HttpsError("invalid-argument", "feedbackId required.");
+  }
+  const inboxRef = db.collection("users").doc(uid).collection("inbox").doc(feedbackId);
+  if (!(await inboxRef.get()).exists) {
+    throw new HttpsError("not-found", "Feedback not found.");
+  }
+  await inboxRef.set({ status: "under_review", disclosed: false }, { merge: true });
+  await db.collection("reviews").doc(feedbackId).set({ status: "under_review" }, { merge: true });
+  const phoneHash = (await db.collection("users").doc(uid).get()).get("phoneHash");
+  await recomputeWall(phoneHash);
   await db.collection("reports").add({
     feedbackId,
     byUid: uid,

@@ -208,6 +208,27 @@ class WallRepository {
         'reason': reason,
       }).then((_) {});
 
+  /// Report a received item as abusive: hidden at once, sent to moderation.
+  Future<void> reportContent(String feedbackId, String reason) =>
+      _fns.httpsCallable('reportContent').call({
+        'feedbackId': feedbackId,
+        'reason': reason,
+      }).then((_) {});
+
+  /// Stop whoever wrote this item from giving me feedback again. They stay
+  /// anonymous to me; the server blocks by their one-way key.
+  Future<void> blockReviewer(String feedbackId) => _fns
+      .httpsCallable('blockReviewer')
+      .call({'feedbackId': feedbackId}).then((_) {});
+
+  Future<int> blockedCount() async {
+    final res = await _fns.httpsCallable('blockedCount').call();
+    return ((res.data as Map)['count'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<void> unblockAll() =>
+      _fns.httpsCallable('unblockAll').call().then((_) {});
+
   // ---- Feedback campaigns (B1) ----
 
   Future<Map<String, dynamic>> requestFeedback({
